@@ -1,0 +1,8 @@
+# Ignore database so you don't push real users
+database.json
+
+# Node modules (optional if you install packages locally)
+node_modules/
+
+# Environment variables
+.env

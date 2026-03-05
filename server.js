@@ -9,7 +9,14 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json());
-app.use(express.static('frontend')); // serve HTML/CSS/JS
+
+// Serve static files from root
+app.use(express.static(process.cwd()));
+
+// Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'index.html'));
+});
 
 // --- DATABASE ---
 const dbFile = path.join(process.cwd(), 'database.json');

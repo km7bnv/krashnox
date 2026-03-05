@@ -8,6 +8,7 @@
   --border-color: #334155;
 }
 
+/* ================= BODY ================= */
 html, body {
   margin: 0;
   padding: 0;
@@ -17,6 +18,7 @@ html, body {
   color: var(--text-color);
 }
 
+/* ================= CONTAINERS ================= */
 #chatScreen, .container {
   display: flex;
   flex-direction: column;
@@ -36,6 +38,7 @@ html, body {
   padding: 10px;
 }
 
+/* ================= MESSAGES ================= */
 .message-list {
   display: flex;
   flex-direction: column;
@@ -69,7 +72,7 @@ html, body {
   color: var(--muted-text);
 }
 
-/* FULL MESSAGE VIEW */
+/* ================= FULL MESSAGE VIEW ================= */
 .message-full {
   background-color: var(--panel-color);
   border: 1px solid var(--border-color);
@@ -83,7 +86,7 @@ html, body {
   display: none;
 }
 
-/* Compose page */
+/* ================= COMPOSE FORM ================= */
 .compose-form {
   background-color: var(--panel-color);
   padding: 15px;
@@ -130,6 +133,7 @@ html, body {
   background-color: #4f46e5;
 }
 
+/* ================= SYSTEM MESSAGES ================= */
 .system-message {
   text-align: center;
   color: var(--muted-text);
@@ -137,7 +141,48 @@ html, body {
   margin: 10px 0;
 }
 
-/* Responsive */
+/* ================= PANEL / HEADER BUTTONS ================= */
+#chatUI button,
+.compose-form button,
+.header-buttons button,
+.message-full button {
+  padding: 12px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+#chatUI button:hover,
+.compose-form button:hover,
+.header-buttons button:hover,
+.message-full button:hover {
+  background-color: #4f46e5; /* Gmail-style hover */
+}
+
+/* ================= HOME SCREEN BUTTONS ================= */
+#joinScreen button,
+#homeScreen button {
+  padding: 12px;
+  margin: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#joinScreen button:hover,
+#homeScreen button:hover {
+  opacity: 0.9; /* keep old hover effect */
+}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 600px) {
   #chatUI {
     width: 95%;

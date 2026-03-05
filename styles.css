@@ -8,7 +8,6 @@
   --border-color: #334155;
 }
 
-/* ================= BODY ================= */
 html, body {
   margin: 0;
   padding: 0;
@@ -38,7 +37,7 @@ html, body {
   padding: 10px;
 }
 
-/* ================= MESSAGES ================= */
+/* ================= MESSAGE LAYOUT (GMAIL-LIKE) ================= */
 .message-list {
   display: flex;
   flex-direction: column;
@@ -48,14 +47,10 @@ html, body {
 .message-item {
   display: flex;
   justify-content: space-between;
-  padding: 12px;
+  align-items: center;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.message-item:hover {
-  background-color: #272f48; /* Gmail-style row hover */
 }
 
 .message-item .info {
@@ -77,13 +72,8 @@ html, body {
   background-color: var(--panel-color);
   border: 1px solid var(--border-color);
   padding: 15px;
-  border-radius: 10px;
+  border-radius: 16px;
   margin-top: 10px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.5);
-}
-
-.hidden {
-  display: none;
 }
 
 /* ================= COMPOSE FORM ================= */
@@ -101,8 +91,8 @@ html, body {
   padding: 10px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
-  background-color: #1e293b;
+  font-size: 16px;
+  background-color: var(--panel-color);
   color: var(--text-color);
   outline: none;
 }
@@ -120,17 +110,13 @@ html, body {
 .compose-form button {
   width: 120px;
   margin-top: 5px;
-  padding: 10px;
+  padding: 12px;
   border: none;
   border-radius: 8px;
   background-color: var(--accent-color);
   color: white;
   cursor: pointer;
-  transition: background 0.2s;
-}
-
-.compose-form button:hover {
-  background-color: #4f46e5;
+  font-size: 16px;
 }
 
 /* ================= SYSTEM MESSAGES ================= */
@@ -142,6 +128,7 @@ html, body {
 }
 
 /* ================= PANEL / HEADER BUTTONS ================= */
+/* Only buttons inside chatUI, compose, header, or message-full */
 #chatUI button,
 .compose-form button,
 .header-buttons button,
@@ -154,14 +141,6 @@ html, body {
   color: white;
   cursor: pointer;
   font-size: 16px;
-  transition: background 0.2s;
-}
-
-#chatUI button:hover,
-.compose-form button:hover,
-.header-buttons button:hover,
-.message-full button:hover {
-  background-color: #4f46e5; /* Gmail-style hover */
 }
 
 /* ================= HOME SCREEN BUTTONS ================= */

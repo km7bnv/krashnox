@@ -1,252 +1,172 @@
-// ================= SOCKET.IO =================
-const socket = io();
-
-// ================= CURRENT USER =================
-let currentUser = localStorage.getItem('currentUser') || '';
-
-// ================= DOM READY =================
-document.addEventListener('DOMContentLoaded', () => {
-  const sendBtn = document.getElementById('sendBtn');
-  if (sendBtn) sendBtn.addEventListener('click', send);
-
-  const loginBtn = document.getElementById('loginBtn');
-  if (loginBtn) loginBtn.addEventListener('click', login);
-
-  const signupBtn = document.getElementById('signupBtn');
-  if (signupBtn) signupBtn.addEventListener('click', signup);
-
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) logoutBtn.addEventListener('click', logout);
-
-  if (window.location.pathname.includes('inbox.html')) loadInbox();
-  if (window.location.pathname.includes('sent.html')) loadSent();
-});
-
-// ================= SIGNUP =================
-async function signup() {
-  const username = document.getElementById('signup-username').value.trim();
-  const password = document.getElementById('signup-password').value.trim();
-  if (!username || !password) return alert('Fill both fields');
-
-  try {
-    const res = await fetch('/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    alert(await res.text());
-    if (res.ok) location.href = 'login.html';
-  } catch (e) {
-    alert('Signup failed: ' + e.message);
-  }
+:root {
+  --bg-color: #0f172a;
+  --panel-color: #1e293b;
+  --accent-color: #6366f1;
+  --self-color: #22c55e;
+  --text-color: #f1f5f9;
+  --muted-text: #94a3b8;
+  --border-color: #334155;
 }
 
-// ================= LOGIN =================
-async function login() {
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value.trim();
-  if (!username || !password) return alert('Fill both fields');
-
-  try {
-    const res = await fetch('/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    const text = await res.text();
-    alert(text);
-
-    if (text === 'Logged in!') {
-      currentUser = username;
-      localStorage.setItem('currentUser', currentUser);
-      socket.emit('join', currentUser);
-      location.href = 'inbox.html';
-    }
-  } catch (e) {
-    alert('Login failed: ' + e.message);
-  }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
-// ================= LOGOUT =================
-function logout() {
-  localStorage.removeItem('currentUser');
-  currentUser = '';
-  location.href = 'index.html';
+.container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 0 10px;
 }
 
-// ================= SEND EMAIL =================
-async function send() {
-  if (!currentUser) return alert('You must log in');
-  const to = document.getElementById('to').value.trim();
-  const subject = document.getElementById('subject').value.trim();
-  const body = document.getElementById('body').value.trim();
-  if (!to || !subject || !body) return alert('All fields required');
-
-  try {
-    const res = await fetch('/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: currentUser, to, subject, body })
-    });
-    alert(await res.text());
-    if (res.ok) {
-      document.getElementById('to').value = '';
-      document.getElementById('subject').value = '';
-      document.getElementById('body').value = '';
-      location.href = 'inbox.html';
-    }
-  } catch (e) {
-    alert('Failed to send: ' + e.message);
-  }
+header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
 }
 
-// ================= LOAD INBOX =================
-function loadInbox() {
-  if (!currentUser) { alert('Not logged in'); location.href = 'login.html'; return; }
-  const inboxDiv = document.getElementById('inbox');
-  const msgView = document.getElementById('message-view');
-  if (!inboxDiv || !msgView) return;
-
-  document.getElementById('current-user').textContent = `Logged in as: ${currentUser}`;
-
-  fetch(`/inbox/${currentUser}`)
-    .then(r => r.json())
-    .then(msgs => renderInbox(msgs))
-    .catch(e => console.error(e));
-
-  socket.emit('join', currentUser);
-  socket.on('newMessage', msg => {
-    if (msg.to === currentUser || msg.to_user === currentUser) prependInboxMessage(msg);
-  });
+header h2 {
+  margin: 0 0 5px 0;
 }
 
-// ================= RENDER INBOX =================
-function renderInbox(messages) {
-  const inboxDiv = document.getElementById('inbox');
-  inboxDiv.innerHTML = '';
-  if (!messages || messages.length === 0) {
-    inboxDiv.innerHTML = '<p class="system-message">No messages</p>';
-    return;
-  }
-
-  messages.forEach((msg, index) => {
-    const div = document.createElement('div');
-    div.classList.add('message-item');
-    div.innerHTML = `
-      <div class="info">
-        <span><b>From:</b> ${msg.from_user}</span>
-        <span><b>Subject:</b> ${msg.subject}</span>
-        <span class="snippet">${msg.body.substring(0, 50)}...</span>
-      </div>
-    `;
-    div.addEventListener('click', () => showInboxMessage(msg, index));
-    inboxDiv.appendChild(div);
-  });
+.header-buttons button {
+  margin-right: 5px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-// ================= SHOW FULL INBOX MESSAGE =================
-function showInboxMessage(msg, index) {
-  const msgView = document.getElementById('message-view');
-  msgView.classList.remove('hidden');
-  document.getElementById('msg-subject').textContent = msg.subject;
-  document.getElementById('msg-from').textContent = msg.from_user;
-  document.getElementById('msg-body').textContent = msg.body;
-
-  const deleteBtn = document.getElementById('deleteMsgBtn');
-  deleteBtn.onclick = () => deleteInbox(index);
+.header-buttons button:hover {
+  background-color: #4f46e5;
 }
 
-// ================= DELETE INBOX MESSAGE =================
-function deleteInbox(index) {
-  fetch(`/message/${index}/${currentUser}`, { method: 'DELETE' })
-    .then(r => r.text())
-    .then(t => {
-      alert(t);
-      closeMessage();
-      loadInbox();
-    })
-    .catch(e => alert('Delete failed: ' + e.message));
+.message-list {
+  background-color: var(--panel-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-// ================= CLOSE MESSAGE =================
-function closeMessage() {
-  const msgView = document.getElementById('message-view');
-  msgView.classList.add('hidden');
+.message-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-// ================= PREPEND NEW MESSAGE =================
-function prependInboxMessage(msg) {
-  const inboxDiv = document.getElementById('inbox');
-  const div = document.createElement('div');
-  div.classList.add('message-item');
-  div.innerHTML = `<div class="info">
-    <span><b>From:</b> ${msg.from}</span>
-    <span><b>Subject:</b> ${msg.subject}</span>
-    <span class="snippet">${msg.body.substring(0,50)}...</span>
-  </div>`;
-  div.addEventListener('click', () => showInboxMessage(msg, 0)); // index 0 because latest pushed
-  inboxDiv.prepend(div);
+.message-item:hover {
+  background-color: #272f48; /* subtle highlight on hover */
 }
 
-// ================= LOAD SENT =================
-function loadSent() {
-  if (!currentUser) { alert('Not logged in'); location.href = 'login.html'; return; }
-  const sentDiv = document.getElementById('sent');
-  const msgView = document.getElementById('message-view');
-  if (!sentDiv || !msgView) return;
-
-  document.getElementById('current-user').textContent = `Logged in as: ${currentUser}`;
-
-  fetch(`/sent/${currentUser}`)
-    .then(r => r.json())
-    .then(msgs => renderSent(msgs))
-    .catch(e => console.error(e));
+.message-item .info {
+  display: flex;
+  flex-direction: column;
 }
 
-// ================= RENDER SENT =================
-function renderSent(messages) {
-  const sentDiv = document.getElementById('sent');
-  sentDiv.innerHTML = '';
-  if (!messages || messages.length === 0) {
-    sentDiv.innerHTML = '<p class="system-message">No sent messages</p>';
-    return;
+.message-item .info span {
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.message-item .snippet {
+  font-size: 12px;
+  color: var(--muted-text);
+}
+
+.message-full {
+  background-color: var(--panel-color);
+  border: 1px solid var(--border-color);
+  padding: 15px;
+  border-radius: 6px;
+  margin-top: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.hidden {
+  display: none;
+}
+
+.compose-form {
+  background-color: var(--panel-color);
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
+.compose-form input,
+.compose-form textarea {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #1e293b;
+  color: var(--text-color);
+  outline: none;
+}
+
+.compose-form input:focus,
+.compose-form textarea:focus {
+  border-color: var(--accent-color);
+}
+
+.compose-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.compose-form button {
+  width: 120px;
+  margin-top: 5px;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--accent-color);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.compose-form button:hover {
+  background-color: #4f46e5;
+}
+
+.system-message {
+  text-align: center;
+  color: var(--muted-text);
+  font-style: italic;
+  margin: 10px 0;
+}
+
+@media (max-width: 600px) {
+  .container {
+    width: 95%;
   }
 
-  messages.forEach((msg, index) => {
-    const div = document.createElement('div');
-    div.classList.add('message-item');
-    div.innerHTML = `
-      <div class="info">
-        <span><b>To:</b> ${msg.to_user}</span>
-        <span><b>Subject:</b> ${msg.subject}</span>
-        <span class="snippet">${msg.body.substring(0,50)}...</span>
-      </div>
-    `;
-    div.addEventListener('click', () => showSentMessage(msg, index));
-    sentDiv.appendChild(div);
-  });
-}
+  .message-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-// ================= SHOW FULL SENT MESSAGE =================
-function showSentMessage(msg, index) {
-  const msgView = document.getElementById('message-view');
-  msgView.classList.remove('hidden');
-  document.getElementById('msg-subject').textContent = msg.subject;
-  document.getElementById('msg-to').textContent = msg.to_user;
-  document.getElementById('msg-body').textContent = msg.body;
-
-  const deleteBtn = document.getElementById('deleteSentBtn');
-  deleteBtn.onclick = () => deleteSent(index);
-}
-
-// ================= DELETE SENT MESSAGE =================
-function deleteSent(index) {
-  fetch(`/sent/${index}/${currentUser}`, { method: 'DELETE' })
-    .then(r => r.text())
-    .then(t => {
-      alert(t);
-      closeMessage();
-      loadSent();
-    })
-    .catch(e => alert('Delete failed: ' + e.message));
+  .compose-form button {
+    width: 100%;
+  }
 }

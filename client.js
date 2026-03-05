@@ -1,10 +1,32 @@
-// Initialize Socket.IO
+// ================= SOCKET.IO =================
 const socket = io();
 
-// Get current user from localStorage
+// ================= CURRENT USER =================
 let currentUser = localStorage.getItem('currentUser') || '';
 
-// ------------------- SIGNUP -------------------
+// ================= DOM READY =================
+document.addEventListener('DOMContentLoaded', () => {
+  // Attach Send button if exists
+  const sendBtn = document.getElementById('sendBtn');
+  if (sendBtn) sendBtn.addEventListener('click', send);
+
+  // Attach Login button if exists
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) loginBtn.addEventListener('click', login);
+
+  // Attach Signup button if exists
+  const signupBtn = document.getElementById('signupBtn');
+  if (signupBtn) signupBtn.addEventListener('click', signup);
+
+  // Attach Logout button if exists
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+  // Load inbox if on inbox page
+  if (window.location.pathname.includes('inbox.html')) loadInbox();
+});
+
+// ================= SIGNUP =================
 async function signup() {
   const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value.trim();
@@ -27,7 +49,7 @@ async function signup() {
   }
 }
 
-// ------------------- LOGIN -------------------
+// ================= LOGIN =================
 async function login() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value.trim();
@@ -58,7 +80,14 @@ async function login() {
   }
 }
 
-// ------------------- SEND EMAIL -------------------
+// ================= LOGOUT =================
+function logout() {
+  localStorage.removeItem('currentUser');
+  currentUser = '';
+  location.href = 'index.html';
+}
+
+// ================= SEND EMAIL =================
 async function send() {
   if (!currentUser) return alert('You must be logged in to send an email.');
 
@@ -78,46 +107,44 @@ async function send() {
     const text = await res.text();
     alert(text);
 
-    if (res.ok) location.href = 'inbox.html';
+    if (res.ok) {
+      document.getElementById('to').value = '';
+      document.getElementById('subject').value = '';
+      document.getElementById('body').value = '';
+
+      location.href = 'inbox.html';
+    }
   } catch (err) {
     alert('Failed to send: ' + err.message);
   }
 }
 
-// ------------------- LOAD INBOX -------------------
+// ================= LOAD INBOX =================
 function loadInbox() {
-  if (!document.getElementById('inbox')) return; // only run on inbox page
-
   if (!currentUser) {
     alert('You are not logged in!');
     location.href = 'login.html';
     return;
   }
 
+  const inboxDiv = document.getElementById('inbox');
+  if (!inboxDiv) return;
+
   document.getElementById('current-user').textContent = `Logged in as: ${currentUser}`;
 
-  // Fetch inbox messages
   fetch(`/inbox/${currentUser}`)
     .then(res => res.json())
-    .then(msgs => {
-      renderInbox(msgs);
-    })
-    .catch(err => {
-      console.error('Failed to load inbox:', err);
-    });
+    .then(messages => renderInbox(messages))
+    .catch(err => console.error(err));
 
-  // Listen for real-time incoming messages
-  socket.on('newMessage', msg => {
-    if (msg.to === currentUser || msg.to_user === currentUser) {
-      prependMessage(msg);
-    }
-  });
-
-  // Join user's Socket.IO room
+  // Real-time updates
   socket.emit('join', currentUser);
+  socket.on('newMessage', msg => {
+    if (msg.to === currentUser || msg.to_user === currentUser) prependMessage(msg);
+  });
 }
 
-// ------------------- RENDER INBOX -------------------
+// ================= RENDER INBOX =================
 function renderInbox(messages) {
   const inboxDiv = document.getElementById('inbox');
   inboxDiv.innerHTML = '';
@@ -137,7 +164,7 @@ function renderInbox(messages) {
   });
 }
 
-// Prepend a new message at the top
+// ================= PREPEND NEW MESSAGE =================
 function prependMessage(msg) {
   const inboxDiv = document.getElementById('inbox');
   const div = document.createElement('div');
@@ -145,13 +172,3 @@ function prependMessage(msg) {
   div.innerHTML = `<b>From:</b> ${msg.from} <b>Subject:</b> ${msg.subject}<p>${msg.body}</p>`;
   inboxDiv.prepend(div);
 }
-
-// ------------------- LOGOUT -------------------
-function logout() {
-  localStorage.removeItem('currentUser');
-  currentUser = '';
-  location.href = 'index.html';
-}
-
-// Automatically load inbox if on inbox.html
-if (window.location.pathname.includes('inbox.html')) loadInbox();

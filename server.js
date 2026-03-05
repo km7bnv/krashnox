@@ -1,54 +1,82 @@
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 import fs from 'fs';
+import path from 'path';
+import http from 'http';
+import { Server } from 'socket.io';
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer);
+const server = http.createServer(app);
+const io = new Server(server);
 
 app.use(express.json());
-app.use(express.static('./')); // serve index.html
+app.use(express.static('frontend')); // serve HTML/CSS/JS
 
-// --- Minimal JSON DB ---
-const DB_FILE = './database.json';
-if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], messages: [] }));
+// --- DATABASE ---
+const dbFile = path.join(process.cwd(), 'database.json');
 
-function readDB() { return JSON.parse(fs.readFileSync(DB_FILE)); }
-function writeDB(data) { fs.writeFileSync(DB_FILE, JSON.stringify(data)); }
+// Initialize database.json if missing
+if(!fs.existsSync(dbFile)){
+  fs.writeFileSync(dbFile, JSON.stringify({ users: [], messages: [] }, null, 2));
+}
 
-// --- Signup ---
-app.post('/signup', (req, res) => {
-  const { username, password } = req.body;
-  const db = readDB();
-  if (db.users.find(u => u.username === username)) return res.status(400).send('User exists');
-  db.users.push({ username, password }); // plain text for bare-bones
-  writeDB(db);
-  res.send('Signed up!');
+// --- SOCKET.IO ---
+io.on('connection', socket => {
+  socket.on('join', username => {
+    socket.join(username); // join room = username
+  });
 });
 
-// --- Login ---
-app.post('/login', (req, res) => {
+// --- SIGNUP ---
+app.post('/signup', (req,res)=>{
   const { username, password } = req.body;
-  const db = readDB();
-  const user = db.users.find(u => u.username === username && u.password === password);
-  if (user) res.send('Logged in!');
-  else res.status(400).send('Invalid login');
+  if(!username || !password) return res.status(400).send('Missing fields');
+
+  const db = JSON.parse(fs.readFileSync(dbFile,'utf-8'));
+  if(db.users.find(u=>u.username===username)) return res.status(400).send('Username taken');
+
+  db.users.push({ username, password }); // passwords are plain for now
+  fs.writeFileSync(dbFile, JSON.stringify(db,null,2));
+
+  res.send('User created!');
 });
 
-// --- Send message ---
-app.post('/send', (req, res) => {
+// --- LOGIN ---
+app.post('/login', (req,res)=>{
+  const { username, password } = req.body;
+  if(!username || !password) return res.status(400).send('Missing fields');
+
+  const db = JSON.parse(fs.readFileSync(dbFile,'utf-8'));
+  const user = db.users.find(u=>u.username===username && u.password===password);
+  if(!user) return res.status(401).send('Invalid credentials');
+
+  res.send('Logged in!');
+});
+
+// --- SEND MESSAGE ---
+app.post('/send', (req,res)=>{
   const { from, to, subject, body } = req.body;
-  const db = readDB();
-  db.messages.push({ from, to, subject, body, timestamp: Date.now() });
-  writeDB(db);
-  io.to(to).emit('newMessage', { from, to, subject, body });
+  if(!from || !to || !subject || !body) return res.status(400).send('Missing fields');
+
+  const db = JSON.parse(fs.readFileSync(dbFile,'utf-8'));
+  db.messages.push({ from_user: from, to_user: to, subject, body });
+  fs.writeFileSync(dbFile, JSON.stringify(db,null,2));
+
+  // Notify recipient if connected
+  io.to(to).emit('newMessage', { from, subject, body });
+
   res.send('Message sent!');
 });
 
-// --- Socket.IO ---
-io.on('connection', (socket) => {
-  socket.on('join', username => { socket.join(username); });
+// --- FETCH INBOX ---
+app.get('/inbox/:username', (req,res)=>{
+  const username = req.params.username;
+  const db = JSON.parse(fs.readFileSync(dbFile,'utf-8'));
+  const inbox = db.messages.filter(m=>m.to_user===username);
+  res.json(inbox);
 });
 
-httpServer.listen(process.env.PORT || 3000, () => console.log('Server running on port 3000'));
+// --- START SERVER ---
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, ()=>{
+  console.log(`Server running on port ${PORT}`);
+});

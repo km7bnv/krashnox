@@ -8,17 +8,25 @@
   <script src="client.js" defer></script>
 </head>
 <body>
-  <div id="chatScreen">
-    <div id="chatUI">
+  <div class="container">
+    <header>
       <h2>Sent Messages</h2>
       <p id="current-user"></p>
-      <div id="sent"></div>
-
-      <div class="buttons">
-        <button onclick="location.href='inbox.html'">Back to Inbox</button>
+      <div class="header-buttons">
+        <button onclick="location.href='inbox.html'">Inbox</button>
         <button onclick="location.href='write.html'">Compose</button>
         <button id="logoutBtn">Logout</button>
       </div>
+    </header>
+
+    <div id="sent" class="message-list"></div>
+
+    <div id="message-view" class="message-full hidden">
+      <button onclick="closeMessage()">Back</button>
+      <h3 id="msg-subject"></h3>
+      <p><b>To:</b> <span id="msg-to"></span></p>
+      <p id="msg-body"></p>
+      <button id="deleteSentBtn">Delete</button>
     </div>
   </div>
 </body>

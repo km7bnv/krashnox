@@ -1,169 +1,252 @@
-:root {
-  --bg-color: #0f172a;
-  --panel-color: #1e293b;
-  --accent-color: #6366f1;
-  --self-color: #22c55e;
-  --text-color: #f1f5f9;
-  --muted-text: #94a3b8;
-  --border-color: #334155;
+// ================= SOCKET.IO =================
+const socket = io();
+
+// ================= CURRENT USER =================
+let currentUser = localStorage.getItem('currentUser') || '';
+
+// ================= DOM READY =================
+document.addEventListener('DOMContentLoaded', () => {
+  const sendBtn = document.getElementById('sendBtn');
+  if (sendBtn) sendBtn.addEventListener('click', send);
+
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) loginBtn.addEventListener('click', login);
+
+  const signupBtn = document.getElementById('signupBtn');
+  if (signupBtn) signupBtn.addEventListener('click', signup);
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+  if (window.location.pathname.includes('inbox.html')) loadInbox();
+  if (window.location.pathname.includes('sent.html')) loadSent();
+});
+
+// ================= SIGNUP =================
+async function signup() {
+  const username = document.getElementById('signup-username').value.trim();
+  const password = document.getElementById('signup-password').value.trim();
+  if (!username || !password) return alert('Fill both fields');
+
+  try {
+    const res = await fetch('/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    alert(await res.text());
+    if (res.ok) location.href = 'login.html';
+  } catch (e) {
+    alert('Signup failed: ' + e.message);
+  }
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
+// ================= LOGIN =================
+async function login() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  if (!username || !password) return alert('Fill both fields');
+
+  try {
+    const res = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const text = await res.text();
+    alert(text);
+
+    if (text === 'Logged in!') {
+      currentUser = username;
+      localStorage.setItem('currentUser', currentUser);
+      socket.emit('join', currentUser);
+      location.href = 'inbox.html';
+    }
+  } catch (e) {
+    alert('Login failed: ' + e.message);
+  }
 }
 
-/* ----------- HOME / LOGIN / SIGNUP ----------- */
-#joinScreen {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+// ================= LOGOUT =================
+function logout() {
+  localStorage.removeItem('currentUser');
+  currentUser = '';
+  location.href = 'index.html';
 }
 
-#joinScreen h1, #joinScreen h2 {
-  margin-bottom: 20px;
-  text-align: center;
+// ================= SEND EMAIL =================
+async function send() {
+  if (!currentUser) return alert('You must log in');
+  const to = document.getElementById('to').value.trim();
+  const subject = document.getElementById('subject').value.trim();
+  const body = document.getElementById('body').value.trim();
+  if (!to || !subject || !body) return alert('All fields required');
+
+  try {
+    const res = await fetch('/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: currentUser, to, subject, body })
+    });
+    alert(await res.text());
+    if (res.ok) {
+      document.getElementById('to').value = '';
+      document.getElementById('subject').value = '';
+      document.getElementById('body').value = '';
+      location.href = 'inbox.html';
+    }
+  } catch (e) {
+    alert('Failed to send: ' + e.message);
+  }
 }
 
-.buttons-div {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+// ================= LOAD INBOX =================
+function loadInbox() {
+  if (!currentUser) { alert('Not logged in'); location.href = 'login.html'; return; }
+  const inboxDiv = document.getElementById('inbox');
+  const msgView = document.getElementById('message-view');
+  if (!inboxDiv || !msgView) return;
+
+  document.getElementById('current-user').textContent = `Logged in as: ${currentUser}`;
+
+  fetch(`/inbox/${currentUser}`)
+    .then(r => r.json())
+    .then(msgs => renderInbox(msgs))
+    .catch(e => console.error(e));
+
+  socket.emit('join', currentUser);
+  socket.on('newMessage', msg => {
+    if (msg.to === currentUser || msg.to_user === currentUser) prependInboxMessage(msg);
+  });
 }
 
-.form-div {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 300px;
-}
-
-/* ----------- INBOX / WRITE ----------- */
-#chatScreen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  height: 100vh;
-}
-
-#chatUI {
-  display: flex;
-  flex-direction: column;
-  width: 90%;
-  max-width: 800px;
-  background-color: var(--panel-color);
-  border-radius: 16px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.4);
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.top-bar, .bottom-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-#inbox {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--panel-color);
-  border-radius: 12px;
-}
-
-/* ----------- EMAIL MESSAGES ----------- */
-.message {
-  display: inline-block;
-  max-width: 70%;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  background-color: var(--accent-color);
-  color: white;
-  word-break: break-word;
-  white-space: pre-wrap;
-  line-height: 1.3;
-  box-shadow: 2px 2px 0px rgba(0,0,0,0.4);
-  align-self: flex-start;
-}
-
-.message.self {
-  background-color: var(--self-color);
-  align-self: flex-end;
-}
-
-.system-message {
-  text-align: center;
-  color: var(--muted-text);
-  font-style: italic;
-  margin: 5px 0;
-}
-
-/* ----------- INPUTS & BUTTONS ----------- */
-input, textarea {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  outline: none;
-  background-color: var(--panel-color);
-  color: var(--text-color);
-  font-size: 16px;
-  box-sizing: border-box;
-}
-
-input:focus, textarea:focus {
-  border-color: var(--accent-color);
-}
-
-button {
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background-color: var(--accent-color);
-  color: white;
-  cursor: pointer;
-  font-size: 16px;
-  margin-top: 10px;
-}
-
-button:hover {
-  background-color: #4f46e5;
-  opacity: 0.9;
-}
-
-/* ----------- LINKS ----------- */
-a {
-  color: var(--accent-color);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* ----------- RESPONSIVE ----------- */
-@media (max-width: 600px) {
-  #chatUI {
-    width: 95%;
+// ================= RENDER INBOX =================
+function renderInbox(messages) {
+  const inboxDiv = document.getElementById('inbox');
+  inboxDiv.innerHTML = '';
+  if (!messages || messages.length === 0) {
+    inboxDiv.innerHTML = '<p class="system-message">No messages</p>';
+    return;
   }
 
-  input, textarea, button {
-    width: 100%;
+  messages.forEach((msg, index) => {
+    const div = document.createElement('div');
+    div.classList.add('message-item');
+    div.innerHTML = `
+      <div class="info">
+        <span><b>From:</b> ${msg.from_user}</span>
+        <span><b>Subject:</b> ${msg.subject}</span>
+        <span class="snippet">${msg.body.substring(0, 50)}...</span>
+      </div>
+    `;
+    div.addEventListener('click', () => showInboxMessage(msg, index));
+    inboxDiv.appendChild(div);
+  });
+}
+
+// ================= SHOW FULL INBOX MESSAGE =================
+function showInboxMessage(msg, index) {
+  const msgView = document.getElementById('message-view');
+  msgView.classList.remove('hidden');
+  document.getElementById('msg-subject').textContent = msg.subject;
+  document.getElementById('msg-from').textContent = msg.from_user;
+  document.getElementById('msg-body').textContent = msg.body;
+
+  const deleteBtn = document.getElementById('deleteMsgBtn');
+  deleteBtn.onclick = () => deleteInbox(index);
+}
+
+// ================= DELETE INBOX MESSAGE =================
+function deleteInbox(index) {
+  fetch(`/message/${index}/${currentUser}`, { method: 'DELETE' })
+    .then(r => r.text())
+    .then(t => {
+      alert(t);
+      closeMessage();
+      loadInbox();
+    })
+    .catch(e => alert('Delete failed: ' + e.message));
+}
+
+// ================= CLOSE MESSAGE =================
+function closeMessage() {
+  const msgView = document.getElementById('message-view');
+  msgView.classList.add('hidden');
+}
+
+// ================= PREPEND NEW MESSAGE =================
+function prependInboxMessage(msg) {
+  const inboxDiv = document.getElementById('inbox');
+  const div = document.createElement('div');
+  div.classList.add('message-item');
+  div.innerHTML = `<div class="info">
+    <span><b>From:</b> ${msg.from}</span>
+    <span><b>Subject:</b> ${msg.subject}</span>
+    <span class="snippet">${msg.body.substring(0,50)}...</span>
+  </div>`;
+  div.addEventListener('click', () => showInboxMessage(msg, 0)); // index 0 because latest pushed
+  inboxDiv.prepend(div);
+}
+
+// ================= LOAD SENT =================
+function loadSent() {
+  if (!currentUser) { alert('Not logged in'); location.href = 'login.html'; return; }
+  const sentDiv = document.getElementById('sent');
+  const msgView = document.getElementById('message-view');
+  if (!sentDiv || !msgView) return;
+
+  document.getElementById('current-user').textContent = `Logged in as: ${currentUser}`;
+
+  fetch(`/sent/${currentUser}`)
+    .then(r => r.json())
+    .then(msgs => renderSent(msgs))
+    .catch(e => console.error(e));
+}
+
+// ================= RENDER SENT =================
+function renderSent(messages) {
+  const sentDiv = document.getElementById('sent');
+  sentDiv.innerHTML = '';
+  if (!messages || messages.length === 0) {
+    sentDiv.innerHTML = '<p class="system-message">No sent messages</p>';
+    return;
   }
 
-  .form-div {
-    width: 90%;
-  }
+  messages.forEach((msg, index) => {
+    const div = document.createElement('div');
+    div.classList.add('message-item');
+    div.innerHTML = `
+      <div class="info">
+        <span><b>To:</b> ${msg.to_user}</span>
+        <span><b>Subject:</b> ${msg.subject}</span>
+        <span class="snippet">${msg.body.substring(0,50)}...</span>
+      </div>
+    `;
+    div.addEventListener('click', () => showSentMessage(msg, index));
+    sentDiv.appendChild(div);
+  });
+}
+
+// ================= SHOW FULL SENT MESSAGE =================
+function showSentMessage(msg, index) {
+  const msgView = document.getElementById('message-view');
+  msgView.classList.remove('hidden');
+  document.getElementById('msg-subject').textContent = msg.subject;
+  document.getElementById('msg-to').textContent = msg.to_user;
+  document.getElementById('msg-body').textContent = msg.body;
+
+  const deleteBtn = document.getElementById('deleteSentBtn');
+  deleteBtn.onclick = () => deleteSent(index);
+}
+
+// ================= DELETE SENT MESSAGE =================
+function deleteSent(index) {
+  fetch(`/sent/${index}/${currentUser}`, { method: 'DELETE' })
+    .then(r => r.text())
+    .then(t => {
+      alert(t);
+      closeMessage();
+      loadSent();
+    })
+    .catch(e => alert('Delete failed: ' + e.message));
 }

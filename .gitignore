@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Database (JSON) if you want it private
+database.json
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -7,24 +7,20 @@
 
 <body>
 
-<div id="joinScreen">
+<div style="max-width:400px; margin:100px auto; padding:20px; background-color:#1e293b; border-radius:10px; text-align:center;">
 
-<div id="chatUI">
+  <h2>Login</h2>
 
-<h2>Login</h2>
+  <input id="username" placeholder="Username" style="width:100%; margin-bottom:15px;">
+  <input id="password" type="password" placeholder="Password" style="width:100%; margin-bottom:15px;">
 
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-
-<button onclick="login()">Login</button>
-
-<button onclick="location.href='index.html'">Back</button>
-
-</div>
+  <button onclick="login()">Login</button>
+  <p style="margin-top:10px;">
+    Don't have an account? <a href="signup.html">Sign Up</a>
+  </p>
 
 </div>
 
 <script src="client.js"></script>
-
 </body>
 </html>

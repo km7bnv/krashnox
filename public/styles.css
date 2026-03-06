@@ -17,7 +17,7 @@ html, body {
   color: var(--text-color);
 }
 
-/* Center screens */
+/* Center screens (login/signup) */
 
 #joinScreen {
   display: flex;
@@ -35,22 +35,32 @@ html, body {
   align-items: center;
 }
 
-/* MAIN PANEL */
+/* Default panel layout */
 
 #chatUI {
   display: flex;
+  flex-direction: column;
   height: 90vh;
   width: 95%;
-  max-width: 1100px;
+  max-width: 800px;
   background-color: var(--panel-color);
   border-radius: 16px;
   box-shadow: 0 0 20px rgba(0,0,0,0.4);
   overflow: hidden;
+  padding: 10px;
 }
 
-/* SIDEBAR (gmail style) */
+/* Gmail-style layout ONLY when class is present */
 
-#sidebar {
+#chatUI.mail-layout {
+  flex-direction: row;
+  padding: 0;
+  max-width: 1100px;
+}
+
+/* Sidebar */
+
+#chatUI.mail-layout #sidebar {
   width: 220px;
   border-right: 1px solid var(--border-color);
   padding: 15px;
@@ -59,7 +69,7 @@ html, body {
   gap: 10px;
 }
 
-/* compose button */
+/* Compose button */
 
 #composeBtn {
   background-color: var(--accent-color);
@@ -70,81 +80,70 @@ html, body {
   cursor: pointer;
 }
 
-/* MAIL AREA */
+/* Mail area */
 
-#mailArea {
+#chatUI.mail-layout #mailArea {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* MAIL HEADER */
+/* Header */
 
-#mailHeader {
+#chatUI.mail-layout #mailHeader {
   padding: 15px;
   border-bottom: 1px solid var(--border-color);
   font-size: 20px;
 }
 
-/* MESSAGE LIST */
+/* Message list */
 
-#chat {
+#chatUI.mail-layout #chat {
   flex: 1;
   overflow-y: auto;
 }
 
-/* Gmail style message row */
+/* Gmail-style message row */
 
-.message {
+#chatUI.mail-layout .message {
   display: grid;
   grid-template-columns: 180px 1fr auto;
   gap: 10px;
   padding: 12px 15px;
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
-  background: transparent;
   max-width: none;
+  background: transparent;
 }
 
-.message:hover {
+#chatUI.mail-layout .message:hover {
   background-color: rgba(255,255,255,0.05);
 }
 
-.message .sender {
+.sender {
   font-weight: bold;
 }
 
-.message .subject {
+.subject {
   color: var(--text-color);
 }
 
-.message .time {
+.time {
   color: var(--muted-text);
   font-size: 13px;
 }
 
-/* compose area */
-
-#composeArea {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* inputs */
+/* Inputs + buttons */
 
 input, textarea, button {
   padding: 10px;
+  margin: 5px 0;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background-color: var(--panel-color);
   color: var(--text-color);
+  outline: none;
   font-size: 16px;
-}
-
-textarea {
-  resize: vertical;
 }
 
 button {
@@ -155,23 +154,15 @@ button:hover {
   opacity: 0.9;
 }
 
-/* system messages */
-
-.system-message {
-  text-align: center;
-  color: var(--muted-text);
-  font-style: italic;
-}
-
-/* mobile */
+/* Mobile */
 
 @media (max-width: 700px) {
 
-  #chatUI {
+  #chatUI.mail-layout {
     flex-direction: column;
   }
 
-  #sidebar {
+  #chatUI.mail-layout #sidebar {
     width: 100%;
     flex-direction: row;
     border-right: none;
@@ -179,7 +170,7 @@ button:hover {
     overflow-x: auto;
   }
 
-  .message {
+  #chatUI.mail-layout .message {
     grid-template-columns: 1fr;
   }
 

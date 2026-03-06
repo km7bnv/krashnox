@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Sent</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div id="chatScreen" style="display:flex;">
+
+<div id="chatUI">
+
+<h2>Sent Messages</h2>
+
+<button onclick="location.href='inbox.html'">Inbox</button>
+
+<div id="chat"></div>
+
+</div>
+
+</div>
+
+<script src="client.js"></script>
+
+<script>
+function showMessages(messages){
+
+const chat=document.getElementById("chat")
+chat.innerHTML=""
+
+messages.forEach(m=>{
+
+const div=document.createElement("div")
+div.className="message self"
+
+div.innerHTML=`
+<b>${m.subject}</b><br>
+To: ${m.to}<br>
+${m.body}<br>
+<button onclick="deleteMsg('${m.id}')">Delete</button>
+`
+
+chat.appendChild(div)
+
+})
+
+}
+
+loadSent()
+</script>
+
+</body>
+</html>

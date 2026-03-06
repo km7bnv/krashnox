@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Inbox</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div id="chatScreen" style="display:flex;">
+
+<div id="chatUI">
+
+<h2>Inbox</h2>
+
+<div>
+
+<button onclick="location.href='compose.html'">Compose</button>
+<button onclick="location.href='sent.html'">Sent</button>
+<button onclick="location.href='index.html'">Logout</button>
+
+</div>
+
+<div id="chat"></div>
+
+</div>
+
+</div>
+
+<script src="client.js"></script>
+
+<script>
+function showMessages(messages){
+
+const chat=document.getElementById("chat")
+chat.innerHTML=""
+
+messages.forEach(m=>{
+
+const div=document.createElement("div")
+div.className="message"
+
+div.innerHTML=`
+<b>${m.subject}</b><br>
+From: ${m.from}<br>
+${m.body}<br>
+<button onclick="deleteMsg('${m.id}')">Delete</button>
+`
+
+chat.appendChild(div)
+
+})
+
+}
+
+loadInbox()
+</script>
+
+</body>
+</html>

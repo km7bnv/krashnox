@@ -7,18 +7,38 @@
 
 <body>
 
-<div id="chatScreen" style="display:flex;">
+<div id="chatScreen">
 
 <div id="chatUI">
 
-<h2>Inbox</h2>
+<!-- SIDEBAR -->
 
-<div>
+<div id="sidebar">
 
-<button onclick="location.href='compose.html'">Compose</button>
-<button onclick="location.href='sent.html'">Sent</button>
-<button onclick="location.href='index.html'">Logout</button>
+<button id="composeBtn" onclick="location.href='compose.html'">
+Compose
+</button>
 
+<button onclick="location.href='inbox.html'">
+Inbox
+</button>
+
+<button onclick="location.href='sent.html'">
+Sent
+</button>
+
+<button onclick="location.href='index.html'">
+Logout
+</button>
+
+</div>
+
+<!-- MAIL AREA -->
+
+<div id="mailArea">
+
+<div id="mailHeader">
+Inbox
 </div>
 
 <div id="chat"></div>
@@ -27,9 +47,12 @@
 
 </div>
 
+</div>
+
 <script src="client.js"></script>
 
 <script>
+
 function showMessages(messages){
 
 const chat=document.getElementById("chat")
@@ -37,23 +60,25 @@ chat.innerHTML=""
 
 messages.forEach(m=>{
 
-const div=document.createElement("div")
-div.className="message"
+const row=document.createElement("div")
+row.className="message"
 
-div.innerHTML=`
-<b>${m.subject}</b><br>
-From: ${m.from}<br>
-${m.body}<br>
+row.innerHTML=`
+<div class="sender">${m.from}</div>
+<div class="subject">${m.subject} - ${m.body}</div>
+<div class="time">
 <button onclick="deleteMsg('${m.id}')">Delete</button>
+</div>
 `
 
-chat.appendChild(div)
+chat.appendChild(row)
 
 })
 
 }
 
 loadInbox()
+
 </script>
 
 </body>

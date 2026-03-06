@@ -1,109 +1,139 @@
-// ==================== DOM ELEMENTS ====================
-const inboxList = document.getElementById("inboxList");
-const sentList = document.getElementById("sentList");
-const fullMessagePanel = document.getElementById("fullMessage");
-const fullMessageContent = document.getElementById("fullMessageContent");
-const composeForm = document.getElementById("composeForm");
+// ==================== client.js ====================
 
-// ==================== FUNCTIONS ====================
+// Make sure DOM is loaded before attaching any events
+document.addEventListener("DOMContentLoaded", () => {
 
-// Render inbox (use your system's inboxMessages array)
-function renderInbox() {
-  if(!inboxList || !window.inboxMessages) return;
-  inboxList.innerHTML = "";
-  window.inboxMessages.forEach(msg => {
-    const item = document.createElement("div");
-    item.classList.add("message-item");
+  // ==================== DOM ELEMENTS ====================
+  const signupBtn = document.getElementById("signupBtn");
+  const loginBtn = document.getElementById("loginBtn");
+  const inboxList = document.getElementById("inboxList");
+  const sentList = document.getElementById("sentList");
+  const fullMessagePanel = document.getElementById("fullMessage");
+  const fullMessageContent = document.getElementById("fullMessageContent");
+  const composeForm = document.getElementById("composeForm");
 
-    const info = document.createElement("div");
-    info.classList.add("info");
-    info.innerHTML = `
-      <span><strong>From:</strong> ${msg.from}</span>
-      <span><strong>Subject:</strong> ${msg.subject}</span>
-      <span class="snippet">${msg.snippet}</span>
-    `;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      // call your system's delete function here
-      deleteInboxMessage(msg.id);
+  // ==================== HOME SCREEN BUTTONS ====================
+  if (signupBtn) {
+    signupBtn.addEventListener("click", () => {
+      // Call your existing signup display function
+      showSignupScreen();  
     });
+  }
 
-    item.appendChild(info);
-    item.appendChild(deleteBtn);
-
-    item.addEventListener("click", () => {
-      fullMessageContent.textContent = msg.body;
-      fullMessagePanel.classList.remove("hidden");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      // Call your existing login display function
+      showLoginScreen();
     });
+  }
 
-    inboxList.appendChild(item);
-  });
-}
+  // ==================== INBOX / SENT RENDER ====================
+  function renderInbox() {
+    if (!inboxList || !window.inboxMessages) return;
 
-// Render sent (use your system's sentMessages array)
-function renderSent() {
-  if(!sentList || !window.sentMessages) return;
-  sentList.innerHTML = "";
-  window.sentMessages.forEach(msg => {
-    const item = document.createElement("div");
-    item.classList.add("message-item");
+    inboxList.innerHTML = "";
+    window.inboxMessages.forEach(msg => {
+      const item = document.createElement("div");
+      item.classList.add("message-item");
 
-    const info = document.createElement("div");
-    info.classList.add("info");
-    info.innerHTML = `
-      <span><strong>To:</strong> ${msg.to}</span>
-      <span><strong>Subject:</strong> ${msg.subject}</span>
-      <span class="snippet">${msg.snippet}</span>
-    `;
+      const info = document.createElement("div");
+      info.classList.add("info");
+      info.innerHTML = `
+        <span><strong>From:</strong> ${msg.from}</span>
+        <span><strong>Subject:</strong> ${msg.subject}</span>
+        <span class="snippet">${msg.snippet}</span>
+      `;
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Delete";
-    deleteBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      // call your system's delete function here
-      deleteSentMessage(msg.id);
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        // Call your existing delete function
+        deleteInboxMessage(msg.id);
+        renderInbox();
+      });
+
+      item.appendChild(info);
+      item.appendChild(deleteBtn);
+
+      // Click to view full message
+      item.addEventListener("click", () => {
+        showFullMessage(msg);
+      });
+
+      inboxList.appendChild(item);
     });
+  }
 
-    item.appendChild(info);
-    item.appendChild(deleteBtn);
+  function renderSent() {
+    if (!sentList || !window.sentMessages) return;
 
-    item.addEventListener("click", () => {
-      fullMessageContent.textContent = msg.body;
-      fullMessagePanel.classList.remove("hidden");
+    sentList.innerHTML = "";
+    window.sentMessages.forEach(msg => {
+      const item = document.createElement("div");
+      item.classList.add("message-item");
+
+      const info = document.createElement("div");
+      info.classList.add("info");
+      info.innerHTML = `
+        <span><strong>To:</strong> ${msg.to}</span>
+        <span><strong>Subject:</strong> ${msg.subject}</span>
+        <span class="snippet">${msg.snippet}</span>
+      `;
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        // Call your existing delete function
+        deleteSentMessage(msg.id);
+        renderSent();
+      });
+
+      item.appendChild(info);
+      item.appendChild(deleteBtn);
+
+      item.addEventListener("click", () => {
+        showFullMessage(msg);
+      });
+
+      sentList.appendChild(item);
     });
+  }
 
-    sentList.appendChild(item);
-  });
-}
+  // ==================== COMPOSE MESSAGE ====================
+  if (composeForm) {
+    composeForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const to = composeForm.elements["to"].value;
+      const subject = composeForm.elements["subject"].value;
+      const body = composeForm.elements["body"].value;
 
-// Compose message (keeps your existing system)
-if(composeForm){
-  composeForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const to = composeForm.elements["to"].value;
-    const subject = composeForm.elements["subject"].value;
-    const body = composeForm.elements["body"].value;
+      if (!to || !subject || !body) {
+        alert("Fill all fields!");
+        return;
+      }
 
-    if(!to || !subject || !body){
-      alert("Fill all fields!");
-      return;
+      // Call your existing send function
+      sendMessage(to, subject, body);
+
+      // Reset form
+      composeForm.reset();
+    });
+  }
+
+  // ==================== FULL MESSAGE PANEL ====================
+  if (fullMessagePanel) {
+    const closeBtn = document.getElementById("closeFullMessage");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
+        fullMessagePanel.classList.add("hidden");
+      });
     }
+  }
 
-    // call your system's send function here
-    sendMessage(to, subject, body);
-  });
-}
+  // ==================== INITIAL RENDER ====================
+  renderInbox();
+  renderSent();
 
-// Close full message panel
-if(fullMessagePanel){
-  document.getElementById("closeFullMessage").addEventListener("click", () => {
-    fullMessagePanel.classList.add("hidden");
-  });
-}
-
-// ==================== INITIAL RENDER ====================
-renderInbox();
-renderSent();
+});

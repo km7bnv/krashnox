@@ -8,6 +8,7 @@
   --border-color: #334155;
 }
 
+/* ================= BODY ================= */
 html, body {
   margin: 0;
   padding: 0;
@@ -128,7 +129,6 @@ html, body {
 }
 
 /* ================= PANEL / HEADER BUTTONS ================= */
-/* Only buttons inside chatUI, compose, header, or message-full */
 #chatUI button,
 .compose-form button,
 .header-buttons button,
@@ -144,9 +144,16 @@ html, body {
 }
 
 /* ================= HOME SCREEN BUTTONS ================= */
-#joinScreen button,
-#homeScreen button {
-  padding: 12px;
+#homeScreen, #joinScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#homeScreen button,
+#joinScreen button {
+  padding: 12px 20px;
   margin: 10px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -156,9 +163,9 @@ html, body {
   font-size: 16px;
 }
 
-#joinScreen button:hover,
-#homeScreen button:hover {
-  opacity: 0.9; /* keep old hover effect */
+#homeScreen button:hover,
+#joinScreen button:hover {
+  opacity: 0.9;
 }
 
 /* ================= RESPONSIVE ================= */

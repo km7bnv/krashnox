@@ -1,27 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Message</title>
+<title>View Message</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-<h2 id="viewSubject"></h2>
+<div class="container">
 
-<p><b>From:</b> <span id="viewFrom"></span></p>
-<p><b>To:</b> <span id="viewTo"></span></p>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <button onclick="location.href='compose.html'">Compose</button>
+    <button onclick="location.href='inbox.html'">Inbox</button>
+    <button onclick="location.href='sent.html'">Sent</button>
+  </div>
 
-<hr>
+  <!-- Main content -->
+  <div class="main">
+    <h2 id="viewSubject">Message Subject</h2>
+    <p><b>From:</b> <span id="viewFrom"></span></p>
+    <p><b>To:</b> <span id="viewTo"></span></p>
+    <hr>
+    <p id="viewBody"></p>
+    
+    <button id="replyBtn">Reply</button>
+    <button onclick="deleteMessage()">Delete</button>
+  </div>
 
-<p id="viewBody"></p>
-
-<br>
-
-<button id="replyBtn">Reply</button>
-<button onclick="deleteMessage()">Delete</button>
+</div>
 
 <script src="client.js"></script>
-
 </body>
 </html>

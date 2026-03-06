@@ -1,117 +1,149 @@
 const express = require("express")
-const fs = require("fs")
+const sqlite3 = require("sqlite3").verbose()
 const bcrypt = require("bcrypt")
-const { v4: uuid } = require("uuid")
 
 const app = express()
 
 app.use(express.json())
-app.use(express.static("public"))
+app.use(express.static(__dirname))
 
-function readDB() {
-  return JSON.parse(fs.readFileSync("database.json"))
+const db = new sqlite3.Database("mail.db")
+
+db.serialize(()=>{
+
+db.run(`
+CREATE TABLE IF NOT EXISTS users(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+username TEXT UNIQUE,
+password TEXT
+)
+`)
+
+db.run(`
+CREATE TABLE IF NOT EXISTS messages(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+sender TEXT,
+receiver TEXT,
+subject TEXT,
+body TEXT,
+read INTEGER DEFAULT 0,
+timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+`)
+
+})
+
+app.post("/api/signup", async (req,res)=>{
+
+const {username,password}=req.body
+const hash=await bcrypt.hash(password,10)
+
+db.run(
+"INSERT INTO users(username,password) VALUES(?,?)",
+[username,hash],
+err=>{
+if(err) return res.json({error:"User exists"})
+res.json({success:true})
+}
+)
+
+})
+
+app.post("/api/login",(req,res)=>{
+
+const {username,password}=req.body
+
+db.get(
+"SELECT * FROM users WHERE username=?",
+[username],
+async (err,user)=>{
+
+if(!user) return res.json({error:"Invalid login"})
+
+const ok=await bcrypt.compare(password,user.password)
+
+if(!ok) return res.json({error:"Invalid login"})
+
+res.json({success:true})
+
+}
+)
+
+})
+
+app.post("/api/send",(req,res)=>{
+
+const {from,to,subject,body}=req.body
+
+db.run(
+`INSERT INTO messages(sender,receiver,subject,body)
+VALUES(?,?,?,?)`,
+[from,to,subject,body],
+()=>res.json({success:true})
+)
+
+})
+
+app.get("/api/inbox",(req,res)=>{
+
+const user=req.query.user
+
+db.all(
+`SELECT * FROM messages
+WHERE receiver=?
+ORDER BY timestamp DESC`,
+[user],
+(err,rows)=>res.json(rows)
+)
+
+})
+
+app.get("/api/sent",(req,res)=>{
+
+const user=req.query.user
+
+db.all(
+`SELECT * FROM messages
+WHERE sender=?
+ORDER BY timestamp DESC`,
+[user],
+(err,rows)=>res.json(rows)
+)
+
+})
+
+app.get("/api/message",(req,res)=>{
+
+const id=req.query.id
+
+db.get(
+"SELECT * FROM messages WHERE id=?",
+[id],
+(err,row)=>{
+
+if(row){
+db.run("UPDATE messages SET read=1 WHERE id=?", [id])
 }
 
-function writeDB(data) {
-  fs.writeFileSync("database.json", JSON.stringify(data, null, 2))
+res.json(row)
+
 }
+)
 
-let sessions = {}
-
-function auth(req,res,next){
-  const token = req.headers.authorization
-  if(!token || !sessions[token]) return res.status(401).send("Not logged in")
-  req.user = sessions[token]
-  next()
-}
-
-app.post("/signup", async (req,res)=>{
-  const {username,password} = req.body
-  const db = readDB()
-
-  if(db.users.find(u=>u.username===username))
-    return res.send("User exists")
-
-  const hash = await bcrypt.hash(password,10)
-
-  db.users.push({
-    id: uuid(),
-    username,
-    password: hash
-  })
-
-  writeDB(db)
-
-  res.send("Signup success")
 })
 
-app.post("/login", async (req,res)=>{
-  const {username,password} = req.body
-  const db = readDB()
+app.post("/api/delete",(req,res)=>{
 
-  const user = db.users.find(u=>u.username===username)
-  if(!user) return res.send("Invalid")
+const {id}=req.body
 
-  const ok = await bcrypt.compare(password,user.password)
-  if(!ok) return res.send("Invalid")
+db.run(
+"DELETE FROM messages WHERE id=?",
+[id],
+()=>res.json({success:true})
+)
 
-  const token = uuid()
-  sessions[token] = user.username
-
-  res.json({token})
 })
 
-app.get("/inbox", auth, (req,res)=>{
-  const db = readDB()
+const PORT=process.env.PORT||3000
 
-  const messages = db.messages.filter(m=>m.to===req.user && !m.deletedBy?.includes(req.user))
-
-  res.json(messages)
-})
-
-app.get("/sent", auth, (req,res)=>{
-  const db = readDB()
-
-  const messages = db.messages.filter(m=>m.from===req.user && !m.deletedBy?.includes(req.user))
-
-  res.json(messages)
-})
-
-app.post("/send", auth, (req,res)=>{
-  const {to,subject,body} = req.body
-  const db = readDB()
-
-  const message = {
-    id: uuid(),
-    from: req.user,
-    to,
-    subject,
-    body,
-    time: Date.now(),
-    deletedBy: []
-  }
-
-  db.messages.push(message)
-
-  writeDB(db)
-
-  res.send("sent")
-})
-
-app.delete("/delete/:id", auth, (req,res)=>{
-  const db = readDB()
-
-  const msg = db.messages.find(m=>m.id===req.params.id)
-
-  if(msg && !msg.deletedBy.includes(req.user)){
-    msg.deletedBy.push(req.user)
-  }
-
-  writeDB(db)
-
-  res.send("deleted")
-})
-
-app.listen(3000, ()=>{
-  console.log("Server running")
-})
+app.listen(PORT,()=>console.log("Server running"))

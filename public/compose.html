@@ -7,23 +7,21 @@
 
 <body>
 
-<div id="chatScreen" style="display:flex;">
-
-<div id="chatUI">
-
-<h2>Compose Email</h2>
+<h2>Compose Message</h2>
 
 <input id="to" placeholder="Recipient">
+
+<br><br>
+
 <input id="subject" placeholder="Subject">
-<textarea id="body" rows="6" placeholder="Message"></textarea>
 
-<button id="sendBtn" onclick="sendMessage()">Send</button>
+<br><br>
 
-<button onclick="location.href='inbox.html'">Back to Inbox</button>
+<textarea id="body" placeholder="Message"></textarea>
 
-</div>
+<br><br>
 
-</div>
+<button onclick="sendMessage()">Send</button>
 
 <script src="client.js"></script>
 

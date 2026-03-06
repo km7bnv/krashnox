@@ -1,38 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sent Messages</title>
-    <link rel="stylesheet" href="styles.css">
+<title>Sent</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-<div id="chatScreen">
+<h2>Sent</h2>
 
-<div id="chatUI" class="mail-layout">
+<button onclick="location.href='compose.html'">Compose</button>
+<button onclick="location.href='inbox.html'">Inbox</button>
 
-    <!-- Sidebar -->
-    <div id="sidebar">
-        <button id="composeBtn" onclick="location.href='compose.html'">Compose</button>
-        <button onclick="location.href='inbox.html'">Inbox</button>
-        <button onclick="location.href='sent.html'">Sent</button>
-        <button onclick="location.href='index.html'">Logout</button>
-    </div>
-
-    <!-- Mail Area -->
-    <div id="mailArea">
-        <div id="mailHeader">Sent</div>
-        <div id="chat"></div>
-    </div>
-
-</div>
-
-</div>
+<div id="mailList"></div>
 
 <script src="client.js"></script>
-<script>
-    loadSent()
-</script>
 
 </body>
 </html>

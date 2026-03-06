@@ -1,121 +1,181 @@
-function getToken(){
-    return localStorage.getItem("token")
+const user = localStorage.getItem("user")
+
+async function signup(){
+
+const username=document.getElementById("username").value
+const password=document.getElementById("password").value
+
+const res=await fetch("/api/signup",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username,password})
+})
+
+const data=await res.json()
+
+if(data.success){
+location.href="login.html"
+}else{
+alert(data.error)
 }
 
-// SIGNUP WITH REDIRECT
-function signup(){
-    const username = document.getElementById("username").value
-    const password = document.getElementById("password").value
-
-    fetch("/signup", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({username,password})
-    })
-    .then(r => r.text())
-    .then(msg => {
-        alert(msg)
-        if(msg.toLowerCase().includes("success")){
-            location.href = "login.html" // redirect after successful signup
-        }
-    })
 }
 
-// LOGIN
-function login(){
-    const username=document.getElementById("username").value
-    const password=document.getElementById("password").value
+async function login(){
 
-    fetch("/login", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({username,password})
-    })
-    .then(r=>r.json())
-    .then(d=>{
-        localStorage.setItem("token", d.token)
-        location.href="inbox.html"
-    })
+const username=document.getElementById("username").value
+const password=document.getElementById("password").value
+
+const res=await fetch("/api/login",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username,password})
+})
+
+const data=await res.json()
+
+if(data.success){
+
+localStorage.setItem("user",username)
+
+location.href="inbox.html"
+
+}else{
+
+alert("Login failed")
+
 }
 
-// SEND MESSAGE
-function sendMessage(){
-    const to=document.getElementById("to").value
-    const subject=document.getElementById("subject").value
-    const body=document.getElementById("body").value
-
-    fetch("/send", {
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json",
-            "Authorization": getToken()
-        },
-        body: JSON.stringify({to,subject,body})
-    })
-    .then(()=> alert("Sent"))
 }
 
-// DELETE MESSAGE
-function deleteMsg(id){
-    fetch("/delete/"+id, {
-        method:"DELETE",
-        headers:{ "Authorization": getToken() }
-    })
-    .then(()=> location.reload())
+async function sendMessage(){
+
+const to=document.getElementById("to").value
+const subject=document.getElementById("subject").value
+const body=document.getElementById("body").value
+
+await fetch("/api/send",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+from:user,
+to,
+subject,
+body
+})
+})
+
+location.href="sent.html"
+
 }
 
-// SHOW MESSAGES (Inbox/Sent) WITH FULL MESSAGE TOGGLE
-function showMessages(messages, isSent=false){
-    const chat=document.getElementById("chat")
-    chat.innerHTML=""
+async function loadInbox(){
 
-    messages.forEach(m => {
-        const row=document.createElement("div")
-        row.className="message"
+const res=await fetch("/api/inbox?user="+user)
+const msgs=await res.json()
 
-        // sender/recipient
-        const name = isSent ? m.to : m.from
+const list=document.getElementById("mailList")
 
-        row.innerHTML = `
-            <div class="sender">${name}</div>
-            <div class="subject">${m.subject}</div>
-            <div class="time">
-                <button onclick="deleteMsg('${m.id}')">Delete</button>
-            </div>
-        `
+list.innerHTML=""
 
-        // full message container
-        const full = document.createElement("div")
-        full.className = "full-message"
-        full.style.display = "none"
-        full.style.padding = "10px 15px"
-        full.style.borderTop = "1px solid var(--border-color)"
-        full.style.backgroundColor = "rgba(255,255,255,0.05)"
-        full.textContent = m.body
+msgs.forEach(m=>{
 
-        row.appendChild(full)
+const div=document.createElement("div")
 
-        // toggle full message on click (ignore delete button clicks)
-        row.addEventListener("click", e => {
-            if(e.target.tagName !== "BUTTON"){
-                full.style.display = full.style.display === "none" ? "block" : "none"
-            }
-        })
+div.className="mailItem"+(m.read?"":" mailUnread")
 
-        chat.appendChild(row)
-    })
+div.onclick=()=>location.href="view.html?id="+m.id
+
+div.innerHTML=`
+<span>${m.sender} - ${m.subject}</span>
+${!m.read?'<span class="unreadDot"></span>':""}
+`
+
+list.appendChild(div)
+
+})
+
 }
 
-// LOAD INBOX
-function loadInbox(){
-    fetch("/inbox", { headers:{ "Authorization": getToken() } })
-    .then(r=>r.json())
-    .then(messages => showMessages(messages, false))
+async function loadSent(){
+
+const res=await fetch("/api/sent?user="+user)
+const msgs=await res.json()
+
+const list=document.getElementById("mailList")
+
+list.innerHTML=""
+
+msgs.forEach(m=>{
+
+const div=document.createElement("div")
+
+div.className="mailItem"
+
+div.onclick=()=>location.href="view.html?id="+m.id
+
+div.innerHTML=`<span>${m.receiver} - ${m.subject}</span>`
+
+list.appendChild(div)
+
+})
+
 }
 
-// LOAD SENT
-function loadSent(){
-    fetch("/sent", { headers:{ "Authorization": getToken() } })
-    .then(r=>r.json())
-    .then(messages => showMessages(messages, true))
+async function loadMessage(){
+
+const params=new URLSearchParams(location.search)
+const id=params.get("id")
+
+const res=await fetch("/api/message?id="+id)
+const msg=await res.json()
+
+document.getElementById("viewSubject").innerText=msg.subject
+document.getElementById("viewFrom").innerText=msg.sender
+document.getElementById("viewTo").innerText=msg.receiver
+document.getElementById("viewBody").innerText=msg.body
+
+document.getElementById("replyBtn").onclick=()=>{
+
+localStorage.setItem("replyTo",msg.sender)
+localStorage.setItem("replySubject","Re: "+msg.subject)
+
+location.href="compose.html"
+
 }
+
+window.deleteMessage=async()=>{
+
+await fetch("/api/delete",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({id})
+})
+
+location.href="inbox.html"
+
+}
+
+}
+
+function loadComposeReply(){
+
+const to=localStorage.getItem("replyTo")
+const subject=localStorage.getItem("replySubject")
+
+if(to){
+
+document.getElementById("to").value=to
+document.getElementById("subject").value=subject
+
+localStorage.removeItem("replyTo")
+localStorage.removeItem("replySubject")
+
+}
+
+}
+
+if(location.pathname.includes("inbox"))loadInbox()
+if(location.pathname.includes("sent"))loadSent()
+if(location.pathname.includes("view"))loadMessage()
+if(location.pathname.includes("compose"))loadComposeReply()

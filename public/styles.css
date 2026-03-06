@@ -173,11 +173,75 @@ button:hover {
   #chatUI.mail-layout .message {
     grid-template-columns: 1fr;
   }
-  
+
   .full-message {
     font-size: 14px;
     color: var(--text-color);
     white-space: pre-wrap;
 }
+.mail-layout{
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:200px;
+background:#1e293b;
+padding:10px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.mailArea{
+flex:1;
+padding:20px;
+overflow-y:auto;
+}
+
+.mailItem{
+padding:10px;
+border-bottom:1px solid #334155;
+display:flex;
+justify-content:space-between;
+cursor:pointer;
+}
+
+.mailItem:hover{
+background:#273449;
+}
+
+.mailUnread{
+font-weight:bold;
+}
+
+.unreadDot{
+width:8px;
+height:8px;
+background:#22c55e;
+border-radius:50%;
+}
+.mailItem{
+padding:10px;
+border-bottom:1px solid #334155;
+display:flex;
+justify-content:space-between;
+cursor:pointer;
+}
+
+.mailItem:hover{
+background:#273449;
+}
+
+.mailUnread{
+font-weight:bold;
+}
+
+.unreadDot{
+width:8px;
+height:8px;
+background:#22c55e;
+border-radius:50%;
+}=
 
 }

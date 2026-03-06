@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt")
 const app = express()
 
 app.use(express.json())
-app.use(express.static(__dirname))
+app.use(express.static("public"))
 
 const db = new sqlite3.Database("mail.db")
 

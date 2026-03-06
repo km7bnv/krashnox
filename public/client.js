@@ -1,181 +1,148 @@
-const user = localStorage.getItem("user")
+// ===========================
+// CLIENT.JS
+// ===========================
 
-async function signup(){
-
-const username=document.getElementById("username").value
-const password=document.getElementById("password").value
-
-const res=await fetch("/api/signup",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({username,password})
-})
-
-const data=await res.json()
-
-if(data.success){
-location.href="login.html"
-}else{
-alert(data.error)
+// Helper function for API calls
+async function api(url, method="GET", data=null){
+  const options = { method, headers: {} };
+  if(data){
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(data);
+  }
+  const res = await fetch(url, options);
+  return res.json();
 }
 
+// ---------------------------
+// AUTH FUNCTIONS
+// ---------------------------
+async function signup(){
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const res = await api("/signup","POST",{username,password});
+  if(res.success){
+    alert("Account created! Redirecting to login...");
+    window.location.href = "login.html";
+  } else alert(res.error);
 }
 
 async function login(){
-
-const username=document.getElementById("username").value
-const password=document.getElementById("password").value
-
-const res=await fetch("/api/login",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({username,password})
-})
-
-const data=await res.json()
-
-if(data.success){
-
-localStorage.setItem("user",username)
-
-location.href="inbox.html"
-
-}else{
-
-alert("Login failed")
-
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const res = await api("/login","POST",{username,password});
+  if(res.success){
+    window.location.href = "inbox.html";
+  } else alert(res.error);
 }
 
+async function logout(){
+  await api("/logout","POST");
+  window.location.href = "index.html";
 }
 
-async function sendMessage(){
-
-const to=document.getElementById("to").value
-const subject=document.getElementById("subject").value
-const body=document.getElementById("body").value
-
-await fetch("/api/send",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from:user,
-to,
-subject,
-body
-})
-})
-
-location.href="sent.html"
-
-}
-
+// ---------------------------
+// INBOX / SENT
+// ---------------------------
 async function loadInbox(){
-
-const res=await fetch("/api/inbox?user="+user)
-const msgs=await res.json()
-
-const list=document.getElementById("mailList")
-
-list.innerHTML=""
-
-msgs.forEach(m=>{
-
-const div=document.createElement("div")
-
-div.className="mailItem"+(m.read?"":" mailUnread")
-
-div.onclick=()=>location.href="view.html?id="+m.id
-
-div.innerHTML=`
-<span>${m.sender} - ${m.subject}</span>
-${!m.read?'<span class="unreadDot"></span>':""}
-`
-
-list.appendChild(div)
-
-})
-
+  const mails = await api("/api/inbox");
+  const list = document.getElementById("mailList");
+  list.innerHTML = "";
+  mails.forEach(mail=>{
+    const div = document.createElement("div");
+    div.className = "mailItem" + (mail.read ? "" : " mailUnread");
+    div.innerHTML = `<span>${mail.fromUser} - ${mail.subject}</span>` + 
+                    (mail.read ? "" : `<span class="unreadDot"></span>`);
+    div.onclick = ()=>viewMessage(mail.id);
+    list.appendChild(div);
+  });
 }
 
 async function loadSent(){
-
-const res=await fetch("/api/sent?user="+user)
-const msgs=await res.json()
-
-const list=document.getElementById("mailList")
-
-list.innerHTML=""
-
-msgs.forEach(m=>{
-
-const div=document.createElement("div")
-
-div.className="mailItem"
-
-div.onclick=()=>location.href="view.html?id="+m.id
-
-div.innerHTML=`<span>${m.receiver} - ${m.subject}</span>`
-
-list.appendChild(div)
-
-})
-
+  const mails = await api("/api/sent");
+  const list = document.getElementById("mailList");
+  list.innerHTML = "";
+  mails.forEach(mail=>{
+    const div = document.createElement("div");
+    div.className = "mailItem";
+    div.innerHTML = `<span>To: ${mail.toUser} - ${mail.subject}</span>`;
+    div.onclick = ()=>viewMessage(mail.id);
+    list.appendChild(div);
+  });
 }
 
-async function loadMessage(){
+// ---------------------------
+// VIEW MESSAGE
+// ---------------------------
+async function viewMessage(id){
+  const mails = await api("/api/inbox"); // fetch inbox to find message
+  const mail = mails.find(m=>m.id===id) || (await api("/api/sent")).find(m=>m.id===id);
+  if(!mail) return alert("Message not found");
 
-const params=new URLSearchParams(location.search)
-const id=params.get("id")
+  // Mark read if inbox
+  if(mail.toUser) await api(`/api/read/${id}`, "POST");
 
-const res=await fetch("/api/message?id="+id)
-const msg=await res.json()
-
-document.getElementById("viewSubject").innerText=msg.subject
-document.getElementById("viewFrom").innerText=msg.sender
-document.getElementById("viewTo").innerText=msg.receiver
-document.getElementById("viewBody").innerText=msg.body
-
-document.getElementById("replyBtn").onclick=()=>{
-
-localStorage.setItem("replyTo",msg.sender)
-localStorage.setItem("replySubject","Re: "+msg.subject)
-
-location.href="compose.html"
-
+  // Store in sessionStorage to use in view.html
+  sessionStorage.setItem("currentMail", JSON.stringify(mail));
+  window.location.href = "view.html";
 }
 
-window.deleteMessage=async()=>{
-
-await fetch("/api/delete",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id})
-})
-
-location.href="inbox.html"
-
+function loadCurrentMessage(){
+  const mail = JSON.parse(sessionStorage.getItem("currentMail"));
+  if(!mail) return alert("No message loaded");
+  document.getElementById("viewFrom").innerText = mail.fromUser || "";
+  document.getElementById("viewTo").innerText = mail.toUser || "";
+  document.getElementById("viewSubject").innerText = mail.subject || "";
+  document.getElementById("viewBody").innerText = mail.body || "";
+  document.getElementById("replyBtn").onclick = ()=>{
+    document.getElementById("to").value = mail.fromUser;
+    document.getElementById("subject").value = "Re: " + mail.subject;
+    window.location.href = "compose.html";
+  }
 }
 
+async function deleteMessage(){
+  const mail = JSON.parse(sessionStorage.getItem("currentMail"));
+  if(!mail) return alert("No message selected");
+  await api(`/api/delete/${mail.id}`,"POST");
+  alert("Message deleted");
+  window.location.href = "inbox.html";
 }
 
-function loadComposeReply(){
+// ---------------------------
+// COMPOSE MESSAGE
+// ---------------------------
+async function sendMessage(){
+  const toUser = document.getElementById("to").value;
+  const subject = document.getElementById("subject").value;
+  const body = document.getElementById("body").value;
+  if(!toUser || !body) return alert("Recipient and body required");
 
-const to=localStorage.getItem("replyTo")
-const subject=localStorage.getItem("replySubject")
-
-if(to){
-
-document.getElementById("to").value=to
-document.getElementById("subject").value=subject
-
-localStorage.removeItem("replyTo")
-localStorage.removeItem("replySubject")
-
+  const res = await api("/api/send","POST",{toUser,subject,body});
+  if(res.success){
+    alert("Message sent!");
+    window.location.href = "sent.html";
+  } else alert(res.error);
 }
 
+// ---------------------------
+// ADMIN FUNCTIONS
+// ---------------------------
+async function loadUsers(){
+  const users = await api("/api/users");
+  const list = document.getElementById("userList");
+  list.innerHTML = "";
+  users.forEach(u=>{
+    const div = document.createElement("div");
+    div.innerHTML = `<span>${u.username}</span> <button onclick="deleteUser('${u.username}')">Delete</button>`;
+    list.appendChild(div);
+  });
 }
 
-if(location.pathname.includes("inbox"))loadInbox()
-if(location.pathname.includes("sent"))loadSent()
-if(location.pathname.includes("view"))loadMessage()
-if(location.pathname.includes("compose"))loadComposeReply()
+async function deleteUser(username){
+  if(!confirm(`Delete user ${username}?`)) return;
+  const res = await api("/api/delete-user","POST",{username});
+  if(res.success){
+    alert("User deleted");
+    loadUsers();
+  } else alert(res.error);
+}

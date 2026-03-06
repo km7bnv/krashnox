@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>Inbox</title>
-<link rel="stylesheet" href="styles.css">
+    <title>Inbox</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -12,74 +11,27 @@
 
 <div id="chatUI" class="mail-layout">
 
-<!-- Sidebar -->
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <button id="composeBtn" onclick="location.href='compose.html'">Compose</button>
+        <button onclick="location.href='inbox.html'">Inbox</button>
+        <button onclick="location.href='sent.html'">Sent</button>
+        <button onclick="location.href='index.html'">Logout</button>
+    </div>
 
-<div id="sidebar">
-
-<button id="composeBtn" onclick="location.href='compose.html'">
-Compose
-</button>
-
-<button onclick="location.href='inbox.html'">
-Inbox
-</button>
-
-<button onclick="location.href='sent.html'">
-Sent
-</button>
-
-<button onclick="location.href='index.html'">
-Logout
-</button>
-
-</div>
-
-<!-- Mail Area -->
-
-<div id="mailArea">
-
-<div id="mailHeader">
-Inbox
-</div>
-
-<div id="chat"></div>
-
-</div>
+    <!-- Mail Area -->
+    <div id="mailArea">
+        <div id="mailHeader">Inbox</div>
+        <div id="chat"></div>
+    </div>
 
 </div>
 
 </div>
 
 <script src="client.js"></script>
-
 <script>
-
-function showMessages(messages){
-
-const chat=document.getElementById("chat")
-chat.innerHTML=""
-
-messages.forEach(m=>{
-
-const row=document.createElement("div")
-row.className="message"
-
-row.innerHTML=`
-<div class="sender">${m.from}</div>
-<div class="subject">${m.subject} - ${m.body}</div>
-<div class="time">
-<button onclick="deleteMsg('${m.id}')">Delete</button>
-</div>
-`
-
-chat.appendChild(row)
-
-})
-
-}
-
-loadInbox()
-
+    loadInbox()
 </script>
 
 </body>

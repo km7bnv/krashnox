@@ -173,5 +173,11 @@ button:hover {
   #chatUI.mail-layout .message {
     grid-template-columns: 1fr;
   }
+  
+  .full-message {
+    font-size: 14px;
+    color: var(--text-color);
+    white-space: pre-wrap;
+}
 
 }

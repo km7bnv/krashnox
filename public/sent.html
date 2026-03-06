@@ -1,53 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Sent</title>
-<link rel="stylesheet" href="styles.css">
+    <title>Sent Messages</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-<div id="chatScreen" style="display:flex;">
+<div id="chatScreen">
 
-<div id="chatUI">
+<div id="chatUI" class="mail-layout">
 
-<h2>Sent Messages</h2>
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <button id="composeBtn" onclick="location.href='compose.html'">Compose</button>
+        <button onclick="location.href='inbox.html'">Inbox</button>
+        <button onclick="location.href='sent.html'">Sent</button>
+        <button onclick="location.href='index.html'">Logout</button>
+    </div>
 
-<button onclick="location.href='inbox.html'">Inbox</button>
-
-<div id="chat"></div>
+    <!-- Mail Area -->
+    <div id="mailArea">
+        <div id="mailHeader">Sent</div>
+        <div id="chat"></div>
+    </div>
 
 </div>
 
 </div>
 
 <script src="client.js"></script>
-
 <script>
-function showMessages(messages){
-
-const chat=document.getElementById("chat")
-chat.innerHTML=""
-
-messages.forEach(m=>{
-
-const div=document.createElement("div")
-div.className="message self"
-
-div.innerHTML=`
-<b>${m.subject}</b><br>
-To: ${m.to}<br>
-${m.body}<br>
-<button onclick="deleteMsg('${m.id}')">Delete</button>
-`
-
-chat.appendChild(div)
-
-})
-
-}
-
-loadSent()
+    loadSent()
 </script>
 
 </body>

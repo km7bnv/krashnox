@@ -2,7 +2,7 @@
 // CLIENT.JS
 // ===========================
 
-// Helper function for API calls
+// Helper for API calls
 async function api(url, method="GET", data=null){
   const options = { method, headers: {} };
   if(data){
@@ -31,7 +31,12 @@ async function login(){
   const password = document.getElementById("password").value;
   const res = await api("/login","POST",{username,password});
   if(res.success){
-    window.location.href = "inbox.html";
+    // Redirect based on admin or regular user
+    if(res.isAdmin){
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "inbox.html";
+    }
   } else alert(res.error);
 }
 
@@ -74,12 +79,14 @@ async function loadSent(){
 // VIEW MESSAGE
 // ---------------------------
 async function viewMessage(id){
-  const mails = await api("/api/inbox"); // fetch inbox to find message
-  const mail = mails.find(m=>m.id===id) || (await api("/api/sent")).find(m=>m.id===id);
+  // Fetch inbox and sent to find the message
+  const inbox = await api("/api/inbox");
+  const sent = await api("/api/sent");
+  const mail = inbox.find(m=>m.id===id) || sent.find(m=>m.id===id);
   if(!mail) return alert("Message not found");
 
-  // Mark read if inbox
-  if(mail.toUser) await api(`/api/read/${id}`, "POST");
+  // Mark as read if inbox
+  if(mail.toUser) await api(`/api/read/${id}`,"POST");
 
   // Store in sessionStorage to use in view.html
   sessionStorage.setItem("currentMail", JSON.stringify(mail));

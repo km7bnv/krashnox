@@ -1,33 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Inbox</title>
+  <title>Sent Messages</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="client.js" defer></script>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h2>Inbox</h2>
-      <p id="current-user"></p>
-      <div class="header-buttons">
-        <button onclick="location.href='write.html'">Compose</button>
-        <button onclick="location.href='sent.html'">Sent</button>
-        <button id="logoutBtn">Logout</button>
-      </div>
-    </header>
+    <h2>Sent Messages</h2>
+    <div id="sentList" class="message-list"></div>
 
-    <div id="inbox" class="message-list"></div>
-
-    <div id="message-view" class="message-full hidden">
-      <button onclick="closeMessage()">Back</button>
-      <h3 id="msg-subject"></h3>
-      <p><b>From:</b> <span id="msg-from"></span></p>
-      <p id="msg-body"></p>
-      <button id="deleteMsgBtn">Delete</button>
+    <!-- Full message panel -->
+    <div id="fullMessage" class="hidden message-full">
+      <button id="closeFullMessage">Close</button>
+      <div id="fullMessageContent"></div>
     </div>
   </div>
+
+  <script src="client.js"></script>
 </body>
 </html>

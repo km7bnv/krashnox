@@ -1,29 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Compose Email</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="client.js" defer></script>
 </head>
 <body>
   <div class="container">
-    <header><h2>Compose</h2></header>
-
-    <div class="compose-form">
-      <label>To:</label>
-      <input id="to" placeholder="Recipient">
-
-      <label>Subject:</label>
-      <input id="subject" placeholder="Subject">
-
-      <label>Message:</label>
-      <textarea id="body" placeholder="Write your message here..."></textarea>
-
-      <button id="sendBtn">Send</button>
-      <button onclick="location.href='inbox.html'">Cancel</button>
-    </div>
+    <h2>Compose Email</h2>
+    <form id="composeForm" class="compose-form">
+      <input name="to" placeholder="To" required>
+      <input name="subject" placeholder="Subject" required>
+      <textarea name="body" placeholder="Message" required></textarea>
+      <button type="submit">Send</button>
+    </form>
   </div>
+
+  <script src="client.js"></script>
 </body>
 </html>

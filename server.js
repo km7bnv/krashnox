@@ -1,287 +1,216 @@
 const express = require("express");
-const sqlite3 = require("sqlite3").verbose();
-const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
 
 const app = express();
-const db = new sqlite3.Database("mail.db");
-
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "supersecret";
-
-// ------------------
-// Middleware
-// ------------------
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: "mail_secret_key",
+  secret: "supersecret",
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: true
 }));
 
-// ------------------
-// Database tables
-// ------------------
 
-db.run(`
-CREATE TABLE IF NOT EXISTS users (
-  username TEXT PRIMARY KEY,
-  password TEXT
-)
-`);
+/* ======================
+   USERS
+====================== */
 
-db.run(`
-CREATE TABLE IF NOT EXISTS messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sender TEXT,
-  recipient TEXT,
-  subject TEXT,
-  body TEXT,
-  time DATETIME DEFAULT CURRENT_TIMESTAMP
-)
-`);
+const users = {
+  admin: { password: "admin123", isAdmin: true },
+  user: { password: "123", isAdmin: false }
+};
 
-// ------------------
-// Create admin user
-// ------------------
 
-bcrypt.hash(ADMIN_PASSWORD,10).then(hash=>{
+/* ======================
+   MESSAGE STORAGE
+====================== */
 
-  db.get(
-    "SELECT * FROM users WHERE username=?",
-    [ADMIN_USERNAME],
-    (err,row)=>{
+let messages = [];
 
-      if(!row){
-        db.run(
-          "INSERT INTO users(username,password) VALUES(?,?)",
-          [ADMIN_USERNAME,hash]
-        );
-      }
 
-    }
-  );
+/* ======================
+   MAINTENANCE MODE
+====================== */
+
+let maintenance = false;
+
+
+/* ======================
+   LOGIN
+====================== */
+
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+
+  const user = users[username];
+
+  if (!user || user.password !== password) {
+    return res.json({ success: false });
+  }
+
+  req.session.user = username;
+  req.session.isAdmin = user.isAdmin;
+
+  res.json({ success: true, isAdmin: user.isAdmin });
+});
+
+
+/* ======================
+   LOGOUT
+====================== */
+
+app.post("/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ success: true });
+  });
+});
+
+
+/* ======================
+   SEND MESSAGE
+====================== */
+
+app.post("/send", (req, res) => {
+
+  if (!req.session.user) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+
+  const { to, subject, body } = req.body;
+
+  const msg = {
+    from: req.session.user,
+    to: to,
+    subject: subject,
+    body: body,
+    time: Date.now()
+  };
+
+  messages.push(msg);
+
+  res.json({ success: true });
 
 });
 
-// ------------------
-// Auth middleware
-// ------------------
 
-function requireLogin(req,res,next){
+/* ======================
+   INBOX
+====================== */
 
-  if(!req.session.user){
-    return res.status(403).send("Not logged in");
+app.get("/inbox", (req, res) => {
+
+  if (!req.session.user) {
+    return res.json([]);
+  }
+
+  const inbox = messages.filter(
+    m => m.to === req.session.user
+  );
+
+  res.json(inbox);
+
+});
+
+
+/* ======================
+   SENT MESSAGES
+====================== */
+
+app.get("/sent", (req, res) => {
+
+  if (!req.session.user) {
+    return res.json([]);
+  }
+
+  const sent = messages.filter(
+    m => m.from === req.session.user
+  );
+
+  res.json(sent);
+
+});
+
+
+/* ======================
+   ADMIN LOGIN CHECK
+====================== */
+
+function requireAdmin(req, res, next) {
+
+  if (!req.session.user || !req.session.isAdmin) {
+    return res.redirect("/");
   }
 
   next();
 
 }
 
-function requireAdmin(req,res,next){
 
-  if(!req.session.user || req.session.user !== ADMIN_USERNAME){
-    return res.status(403).send("Admin only");
-  }
+/* ======================
+   ADMIN PAGE PROTECTION
+====================== */
 
-  next();
-
-}
-
-// ------------------
-// Static files
-// ------------------
-
-app.use(express.static("public"));
-
-// ------------------
-// Protect admin page
-// ------------------
-
-app.get("/admin.html", requireAdmin, (req,res)=>{
-  res.sendFile(path.join(__dirname,"public","admin.html"));
+app.get("/admin.html", requireAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, "public/admin.html"));
 });
 
-// ------------------
-// Signup
-// ------------------
 
-app.post("/signup", async (req,res)=>{
+/* ======================
+   ADMIN LOGOUT
+====================== */
 
-  const {username,password}=req.body;
+app.post("/admin/logout", (req, res) => {
 
-  const hash = await bcrypt.hash(password,10);
-
-  db.run(
-    "INSERT INTO users(username,password) VALUES(?,?)",
-    [username,hash],
-    function(err){
-
-      if(err) return res.send({error:"Username taken"});
-
-      res.send({success:true});
-
-    }
-  );
-
-});
-
-// ------------------
-// Login
-// ------------------
-
-app.post("/login",(req,res)=>{
-
-  const {username,password}=req.body;
-
-  db.get(
-    "SELECT * FROM users WHERE username=?",
-    [username],
-    async (err,row)=>{
-
-      if(!row) return res.send({error:"User not found"});
-
-      const ok = await bcrypt.compare(password,row.password);
-
-      if(!ok) return res.send({error:"Wrong password"});
-
-      req.session.user=username;
-
-      res.send({
-        success:true,
-        isAdmin: username===ADMIN_USERNAME
-      });
-
-    }
-  );
-
-});
-
-// ------------------
-// Logout
-// ------------------
-
-app.post("/logout",(req,res)=>{
-
-  req.session.destroy(()=>{
-    res.send({success:true});
+  req.session.destroy(() => {
+    res.json({ success: true });
   });
 
 });
 
-// ------------------
-// Send message
-// ------------------
 
-app.post("/api/send", requireLogin, (req,res)=>{
+/* ======================
+   MAINTENANCE TOGGLE
+====================== */
 
-  const {toUser,subject,body}=req.body;
+app.post("/admin/toggle-maintenance", requireAdmin, (req, res) => {
 
-  db.run(
-    "INSERT INTO messages(sender,recipient,subject,body) VALUES(?,?,?,?)",
-    [req.session.user,toUser,subject,body],
-    function(err){
+  maintenance = !maintenance;
 
-      if(err) return res.send({error:"DB error"});
-
-      res.send({success:true});
-
-    }
-  );
+  res.json({
+    maintenance: maintenance
+  });
 
 });
 
-// ------------------
-// Inbox
-// ------------------
 
-app.get("/api/inbox", requireLogin, (req,res)=>{
+/* ======================
+   CHECK MAINTENANCE
+====================== */
 
-  db.all(
-    "SELECT * FROM messages WHERE recipient=? ORDER BY time DESC",
-    [req.session.user],
-    (err,rows)=>{
+app.get("/maintenance-status", (req, res) => {
 
-      if(err) return res.send([]);
-
-      res.send(rows);
-
-    }
-  );
+  res.json({
+    maintenance: maintenance
+  });
 
 });
 
-// ------------------
-// Sent messages
-// ------------------
 
-app.get("/api/sent", requireLogin, (req,res)=>{
+/* ======================
+   STATIC FILES
+====================== */
 
-  db.all(
-    "SELECT * FROM messages WHERE sender=? ORDER BY time DESC",
-    [req.session.user],
-    (err,rows)=>{
+app.use(express.static(path.join(__dirname, "public")));
 
-      if(err) return res.send([]);
 
-      res.send(rows);
+/* ======================
+   START SERVER
+====================== */
 
-    }
-  );
-
-});
-
-// ------------------
-// Admin: list users
-// ------------------
-
-app.get("/api/users", requireAdmin, (req,res)=>{
-
-  db.all(
-    "SELECT username FROM users WHERE username != ?",
-    [ADMIN_USERNAME],
-    (err,rows)=>{
-
-      res.send(rows);
-
-    }
-  );
-
-});
-
-// ------------------
-// Admin: delete user
-// ------------------
-
-app.post("/api/delete-user", requireAdmin, (req,res)=>{
-
-  const {username}=req.body;
-
-  db.run(
-    "DELETE FROM users WHERE username=?",
-    [username],
-    ()=>{
-
-      db.run(
-        "DELETE FROM messages WHERE sender=? OR recipient=?",
-        [username,username]
-      );
-
-      res.send({success:true});
-
-    }
-  );
-
-});
-
-// ------------------
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT,()=>{
-  console.log("Server running on port "+PORT);
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });

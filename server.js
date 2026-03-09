@@ -1,185 +1,149 @@
-async function api(url,method="GET",data=null){
+const express = require("express");
+const session = require("express-session");
+const path = require("path");
 
-  const options={method,headers:{}};
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  if(data){
-    options.headers["Content-Type"]="application/json";
-    options.body=JSON.stringify(data);
-  }
+app.use(express.json());
 
-  const res=await fetch(url,options);
-  return res.json();
+app.use(session({
+  secret: "secret123",
+  resave: false,
+  saveUninitialized: true
+}));
 
-}
+app.use(express.static(path.join(__dirname,"public")));
 
-// -------------------
+let users = [
+  { username:"admin", password:"admin123", isAdmin:true }
+];
+
+let messages = [];
+
 // LOGIN
-// -------------------
+app.post("/login",(req,res)=>{
 
-async function login(){
+  const {username,password}=req.body;
 
-  const username=document.getElementById("username").value;
-  const password=document.getElementById("password").value;
+  const user=users.find(u=>u.username===username && u.password===password);
 
-  const res=await api("/login","POST",{username,password});
-
-  if(res.success){
-
-    if(res.isAdmin)
-      window.location.href="admin.html";
-    else
-      window.location.href="inbox.html";
-
+  if(!user){
+    return res.json({success:false,error:"Invalid login"});
   }
-  else alert(res.error);
 
-}
+  req.session.user=username;
+  req.session.isAdmin=user.isAdmin;
 
-// -------------------
+  res.json({success:true,isAdmin:user.isAdmin});
+});
+
+
 // SIGNUP
-// -------------------
+app.post("/signup",(req,res)=>{
 
-async function signup(){
+  const {username,password}=req.body;
 
-  const username=document.getElementById("username").value;
-  const password=document.getElementById("password").value;
-
-  const res=await api("/signup","POST",{username,password});
-
-  if(res.success){
-    alert("Account created");
-    window.location.href="login.html";
+  if(users.find(u=>u.username===username)){
+    return res.json({success:false,error:"User exists"});
   }
-  else alert(res.error);
 
-}
+  users.push({
+    username,
+    password,
+    isAdmin:false
+  });
 
-// -------------------
+  res.json({success:true});
+});
+
+
 // SEND MAIL
-// -------------------
+app.post("/api/send",(req,res)=>{
 
-async function sendMessage(){
+  if(!req.session.user)
+    return res.json({success:false,error:"Not logged in"});
 
-  const toUser=document.getElementById("to").value;
-  const subject=document.getElementById("subject").value;
-  const body=document.getElementById("body").value;
+  const {toUser,subject,body}=req.body;
 
-  const res=await api("/api/send","POST",{toUser,subject,body});
+  messages.push({
+    fromUser:req.session.user,
+    toUser,
+    subject,
+    body
+  });
 
-  if(res.success){
-    alert("Message sent");
-    window.location.href="sent.html";
-  }
-  else alert(res.error);
+  res.json({success:true});
+});
 
-}
 
-// -------------------
 // INBOX
-// -------------------
+app.get("/api/inbox",(req,res)=>{
 
-async function loadInbox(){
+  if(!req.session.user)
+    return res.json([]);
 
-  const mails=await api("/api/inbox");
+  const inbox = messages.filter(
+    m => m.toUser === req.session.user
+  );
 
-  const list=document.getElementById("mailList");
-  list.innerHTML="";
+  res.json(inbox);
+});
 
-  mails.forEach(mail=>{
 
-    const div=document.createElement("div");
-
-    div.innerHTML=
-      "<b>"+mail.fromUser+"</b> - "+
-      (mail.subject || "(No subject)");
-
-    div.onclick=()=>{
-      sessionStorage.setItem("mail",JSON.stringify(mail));
-      window.location.href="view.html";
-    };
-
-    list.appendChild(div);
-
-  });
-
-}
-
-// -------------------
 // SENT
-// -------------------
+app.get("/api/sent",(req,res)=>{
 
-async function loadSent(){
+  if(!req.session.user)
+    return res.json([]);
 
-  const mails=await api("/api/sent");
+  const sent = messages.filter(
+    m => m.fromUser === req.session.user
+  );
 
-  const list=document.getElementById("mailList");
-  list.innerHTML="";
+  res.json(sent);
+});
 
-  mails.forEach(mail=>{
 
-    const div=document.createElement("div");
+// ADMIN USERS
+app.get("/api/users",(req,res)=>{
 
-    div.innerHTML=
-      "To: <b>"+mail.toUser+"</b> - "+
-      (mail.subject || "(No subject)");
+  if(!req.session.isAdmin)
+    return res.json([]);
 
-    div.onclick=()=>{
-      sessionStorage.setItem("mail",JSON.stringify(mail));
-      window.location.href="view.html";
-    };
+  res.json(users);
+});
 
-    list.appendChild(div);
 
-  });
+// DELETE USER
+app.post("/api/delete-user",(req,res)=>{
 
-}
+  if(!req.session.isAdmin)
+    return res.json({success:false});
 
-// -------------------
-// VIEW MESSAGE
-// -------------------
+  const {username}=req.body;
 
-function loadMessage(){
+  users = users.filter(u=>u.username!==username);
 
-  const mail=JSON.parse(sessionStorage.getItem("mail"));
+  messages = messages.filter(
+    m => m.fromUser !== username && m.toUser !== username
+  );
 
-  document.getElementById("viewFrom").innerText=mail.fromUser;
-  document.getElementById("viewTo").innerText=mail.toUser;
-  document.getElementById("viewSubject").innerText=mail.subject;
-  document.getElementById("viewBody").innerText=mail.body;
+  res.json({success:true});
+});
 
-}
 
-// -------------------
-// ADMIN
-// -------------------
+// ADMIN PAGE PROTECTION
+app.get("/admin.html",(req,res,next)=>{
 
-async function loadUsers(){
+  if(!req.session.isAdmin){
+    return res.redirect("/login.html");
+  }
 
-  const users=await api("/api/users");
+  next();
 
-  const list=document.getElementById("userList");
-  list.innerHTML="";
+});
 
-  users.forEach(u=>{
-
-    const div=document.createElement("div");
-
-    div.innerHTML=
-      u.username+
-      " <button onclick=\"deleteUser('"+u.username+"')\">Delete</button>";
-
-    list.appendChild(div);
-
-  });
-
-}
-
-async function deleteUser(username){
-
-  if(!confirm("Delete "+username+"?")) return;
-
-  await api("/api/delete-user","POST",{username});
-
-  loadUsers();
-
-}
+app.listen(PORT,()=>{
+  console.log("Server running on port "+PORT);
+});

@@ -1,216 +1,185 @@
-const express = require("express");
-const session = require("express-session");
-const path = require("path");
+async function api(url,method="GET",data=null){
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+  const options={method,headers:{}};
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use(session({
-  secret: "supersecret",
-  resave: false,
-  saveUninitialized: true
-}));
-
-
-/* ======================
-   USERS
-====================== */
-
-const users = {
-  admin: { password: "admin123", isAdmin: true },
-  user: { password: "123", isAdmin: false }
-};
-
-
-/* ======================
-   MESSAGE STORAGE
-====================== */
-
-let messages = [];
-
-
-/* ======================
-   MAINTENANCE MODE
-====================== */
-
-let maintenance = false;
-
-
-/* ======================
-   LOGIN
-====================== */
-
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-
-  const user = users[username];
-
-  if (!user || user.password !== password) {
-    return res.json({ success: false });
+  if(data){
+    options.headers["Content-Type"]="application/json";
+    options.body=JSON.stringify(data);
   }
 
-  req.session.user = username;
-  req.session.isAdmin = user.isAdmin;
-
-  res.json({ success: true, isAdmin: user.isAdmin });
-});
-
-
-/* ======================
-   LOGOUT
-====================== */
-
-app.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
-});
-
-
-/* ======================
-   SEND MESSAGE
-====================== */
-
-app.post("/send", (req, res) => {
-
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not logged in" });
-  }
-
-  const { to, subject, body } = req.body;
-
-  const msg = {
-    from: req.session.user,
-    to: to,
-    subject: subject,
-    body: body,
-    time: Date.now()
-  };
-
-  messages.push(msg);
-
-  res.json({ success: true });
-
-});
-
-
-/* ======================
-   INBOX
-====================== */
-
-app.get("/inbox", (req, res) => {
-
-  if (!req.session.user) {
-    return res.json([]);
-  }
-
-  const inbox = messages.filter(
-    m => m.to === req.session.user
-  );
-
-  res.json(inbox);
-
-});
-
-
-/* ======================
-   SENT MESSAGES
-====================== */
-
-app.get("/sent", (req, res) => {
-
-  if (!req.session.user) {
-    return res.json([]);
-  }
-
-  const sent = messages.filter(
-    m => m.from === req.session.user
-  );
-
-  res.json(sent);
-
-});
-
-
-/* ======================
-   ADMIN LOGIN CHECK
-====================== */
-
-function requireAdmin(req, res, next) {
-
-  if (!req.session.user || !req.session.isAdmin) {
-    return res.redirect("/");
-  }
-
-  next();
+  const res=await fetch(url,options);
+  return res.json();
 
 }
 
+// -------------------
+// LOGIN
+// -------------------
 
-/* ======================
-   ADMIN PAGE PROTECTION
-====================== */
+async function login(){
 
-app.get("/admin.html", requireAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, "public/admin.html"));
-});
+  const username=document.getElementById("username").value;
+  const password=document.getElementById("password").value;
 
+  const res=await api("/login","POST",{username,password});
 
-/* ======================
-   ADMIN LOGOUT
-====================== */
+  if(res.success){
 
-app.post("/admin/logout", (req, res) => {
+    if(res.isAdmin)
+      window.location.href="admin.html";
+    else
+      window.location.href="inbox.html";
 
-  req.session.destroy(() => {
-    res.json({ success: true });
+  }
+  else alert(res.error);
+
+}
+
+// -------------------
+// SIGNUP
+// -------------------
+
+async function signup(){
+
+  const username=document.getElementById("username").value;
+  const password=document.getElementById("password").value;
+
+  const res=await api("/signup","POST",{username,password});
+
+  if(res.success){
+    alert("Account created");
+    window.location.href="login.html";
+  }
+  else alert(res.error);
+
+}
+
+// -------------------
+// SEND MAIL
+// -------------------
+
+async function sendMessage(){
+
+  const toUser=document.getElementById("to").value;
+  const subject=document.getElementById("subject").value;
+  const body=document.getElementById("body").value;
+
+  const res=await api("/api/send","POST",{toUser,subject,body});
+
+  if(res.success){
+    alert("Message sent");
+    window.location.href="sent.html";
+  }
+  else alert(res.error);
+
+}
+
+// -------------------
+// INBOX
+// -------------------
+
+async function loadInbox(){
+
+  const mails=await api("/api/inbox");
+
+  const list=document.getElementById("mailList");
+  list.innerHTML="";
+
+  mails.forEach(mail=>{
+
+    const div=document.createElement("div");
+
+    div.innerHTML=
+      "<b>"+mail.fromUser+"</b> - "+
+      (mail.subject || "(No subject)");
+
+    div.onclick=()=>{
+      sessionStorage.setItem("mail",JSON.stringify(mail));
+      window.location.href="view.html";
+    };
+
+    list.appendChild(div);
+
   });
 
-});
+}
 
+// -------------------
+// SENT
+// -------------------
 
-/* ======================
-   MAINTENANCE TOGGLE
-====================== */
+async function loadSent(){
 
-app.post("/admin/toggle-maintenance", requireAdmin, (req, res) => {
+  const mails=await api("/api/sent");
 
-  maintenance = !maintenance;
+  const list=document.getElementById("mailList");
+  list.innerHTML="";
 
-  res.json({
-    maintenance: maintenance
+  mails.forEach(mail=>{
+
+    const div=document.createElement("div");
+
+    div.innerHTML=
+      "To: <b>"+mail.toUser+"</b> - "+
+      (mail.subject || "(No subject)");
+
+    div.onclick=()=>{
+      sessionStorage.setItem("mail",JSON.stringify(mail));
+      window.location.href="view.html";
+    };
+
+    list.appendChild(div);
+
   });
 
-});
+}
 
+// -------------------
+// VIEW MESSAGE
+// -------------------
 
-/* ======================
-   CHECK MAINTENANCE
-====================== */
+function loadMessage(){
 
-app.get("/maintenance-status", (req, res) => {
+  const mail=JSON.parse(sessionStorage.getItem("mail"));
 
-  res.json({
-    maintenance: maintenance
+  document.getElementById("viewFrom").innerText=mail.fromUser;
+  document.getElementById("viewTo").innerText=mail.toUser;
+  document.getElementById("viewSubject").innerText=mail.subject;
+  document.getElementById("viewBody").innerText=mail.body;
+
+}
+
+// -------------------
+// ADMIN
+// -------------------
+
+async function loadUsers(){
+
+  const users=await api("/api/users");
+
+  const list=document.getElementById("userList");
+  list.innerHTML="";
+
+  users.forEach(u=>{
+
+    const div=document.createElement("div");
+
+    div.innerHTML=
+      u.username+
+      " <button onclick=\"deleteUser('"+u.username+"')\">Delete</button>";
+
+    list.appendChild(div);
+
   });
 
-});
+}
 
+async function deleteUser(username){
 
-/* ======================
-   STATIC FILES
-====================== */
+  if(!confirm("Delete "+username+"?")) return;
 
-app.use(express.static(path.join(__dirname, "public")));
+  await api("/api/delete-user","POST",{username});
 
+  loadUsers();
 
-/* ======================
-   START SERVER
-====================== */
-
-app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
-});
+}

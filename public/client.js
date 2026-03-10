@@ -41,17 +41,34 @@ async function logout() {
 }
 
 // -------------------
-// SEND MESSAGE
+// SEND MESSAGE / REPLY
 // -------------------
 async function sendMessage() {
   const subject = document.getElementById("subject").value
   const body = document.getElementById("body").value
   const threadId = sessionStorage.getItem("replyThread")
-  const res = await api("/api/send", "POST", { toUser: null, subject, body, threadId })
 
+  let toUser = null
+  if (threadId) {
+    // Find recipient from thread
+    const messages = await api("/api/thread?id=" + threadId)
+    if (messages.length > 0) {
+      toUser = messages[0].fromUser === sessionStorage.getItem("username")
+        ? messages[0].toUser
+        : messages[0].fromUser
+    }
+  }
+
+  // For new messages (not a reply)
+  if (!toUser) {
+    toUser = document.getElementById("to")?.value
+    if (!toUser) return alert("Recipient required")
+  }
+
+  const res = await api("/api/send", "POST", { toUser, subject, body, threadId })
   if (res.success) {
     sessionStorage.removeItem("replyThread")
-    window.location.href = "view.html" // go back to thread view
+    window.location.href = "inbox.html" // Redirect to inbox after sending
   }
 }
 
@@ -100,7 +117,7 @@ async function loadSent() {
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // Optional: show unread if any recipient hasn't read (requires server support)
+    // Optional: show unread if any recipient hasn't read
     const threadMessages = await api("/api/thread?id=" + mail.threadId)
     const hasUnread = threadMessages.some(m => m.read === 0 && m.fromUser !== sessionStorage.getItem("username"))
     const unreadClass = hasUnread ? "mailUnread" : ""

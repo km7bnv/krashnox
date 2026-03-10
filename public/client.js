@@ -1,95 +1,275 @@
 // API helper
 async function api(url, method="GET", data=null){
   const options={method,headers:{}}
-  if(data){options.headers["Content-Type"]="application/json";options.body=JSON.stringify(data)}
+  if(data){
+    options.headers["Content-Type"]="application/json"
+    options.body=JSON.stringify(data)
+  }
   const res=await fetch(url,options)
   return res.json()
 }
 
 // LOGIN / SIGNUP
-async function login(){ const u=document.getElementById("username").value; const p=document.getElementById("password").value; const res=await api("/login","POST",{username:u,password:p}); if(res.success) window.location.href=res.isAdmin?"admin.html":"inbox.html"; else alert(res.error)}
-async function signup(){ const u=document.getElementById("username").value; const p=document.getElementById("password").value; const res=await api("/signup","POST",{username:u,password:p}); if(res.success){alert("Account created"); window.location.href="login.html"} else alert(res.error)}
-async function logout(){ await api("/logout","POST"); window.location.href="index.html"}
+async function login(){
+  const u=document.getElementById("username").value
+  const p=document.getElementById("password").value
+  const res=await api("/login","POST",{username:u,password:p})
+  if(res.success) window.location.href=res.isAdmin?"admin.html":"inbox.html"
+  else alert(res.error)
+}
+
+async function signup(){
+  const u=document.getElementById("username").value
+  const p=document.getElementById("password").value
+  const res=await api("/signup","POST",{username:u,password:p})
+  if(res.success){
+    alert("Account created")
+    window.location.href="login.html"
+  }else alert(res.error)
+}
+
+async function logout(){
+  await api("/logout","POST")
+  window.location.href="index.html"
+}
 
 // SEND / REPLY
 async function sendMessage(){
+
   const subject=document.getElementById("subject").value
   const body=document.getElementById("body").value
+
   const threadId=sessionStorage.getItem("replyThread")
+
   let toUser=null
+
   if(threadId){
+
     const messages=await api("/api/thread?id="+threadId)
-    if(messages.length>0) toUser=messages[0].fromUser===sessionStorage.getItem("username")?messages[0].toUser:messages[0].fromUser
+
+    if(messages.length>0){
+
+      const first=messages[0]
+
+      if(first.fromUser===sessionStorage.getItem("username"))
+        toUser=first.toUser
+      else
+        toUser=first.fromUser
+    }
   }
-  if(!toUser){ toUser=document.getElementById("to")?.value; if(!toUser) return alert("Recipient required") }
+
+  if(!toUser){
+
+    const toField=document.getElementById("to")
+
+    if(toField) toUser=toField.value
+
+    if(!toUser) return alert("Recipient required")
+  }
+
   const res=await api("/api/send","POST",{toUser,subject,body,threadId})
-  if(res.success){ sessionStorage.removeItem("replyThread"); window.location.href="inbox.html" }
+
+  if(res.success){
+
+    sessionStorage.removeItem("replyThread")
+
+    window.location.href="inbox.html"
+  }
 }
 
 // LOAD INBOX
 async function loadInbox(){
+
   const mails=await api("/api/inbox-collapsed")
-  const list=document.getElementById("mailList"); if(!list) return; list.innerHTML=""
+
+  const list=document.getElementById("mailList")
+
+  if(!list) return
+
+  list.innerHTML=""
+
   for(const mail of mails){
-    const div=document.createElement("div"); div.className="mail-item"
+
+    const div=document.createElement("div")
+
+    div.className="mail-item"
+
     const threadMessages=await api("/api/thread?id="+mail.threadId)
-    const hasUnread=threadMessages.some(m=>m.read===0)
-    const preview=threadMessages[0]
-    div.innerHTML=`<span class="${hasUnread?'mailUnread':''}"><b>${preview.fromUser}</b> - ${preview.subject} ${hasUnread?'<span class="unreadDot"></span>':''}</span>`
-    div.onclick=()=>{ sessionStorage.setItem("threadId", mail.threadId); window.location.href="view.html" }
+
+    const hasUnread=threadMessages.some(
+      m=>m.read===0 && m.fromUser!==sessionStorage.getItem("username")
+    )
+
+    // FIX: use newest message for preview
+    const preview=threadMessages[threadMessages.length-1]
+
+    div.innerHTML=`
+      <span class="${hasUnread?'mailUnread':''}">
+      <b>${preview.fromUser}</b> - ${preview.subject}
+      ${hasUnread?'<span class="unreadDot"></span>':''}
+      </span>
+    `
+
+    div.onclick=()=>{
+      sessionStorage.setItem("threadId",mail.threadId)
+      window.location.href="view.html"
+    }
+
     list.appendChild(div)
   }
 }
 
 // LOAD SENT
 async function loadSent(){
+
   const mails=await api("/api/sent-collapsed")
-  const list=document.getElementById("mailList"); if(!list) return; list.innerHTML=""
+
+  const list=document.getElementById("mailList")
+
+  if(!list) return
+
+  list.innerHTML=""
+
   for(const mail of mails){
-    const div=document.createElement("div"); div.className="mail-item"
+
+    const div=document.createElement("div")
+
+    div.className="mail-item"
+
     const threadMessages=await api("/api/thread?id="+mail.threadId)
-    const hasUnread=threadMessages.some(m=>m.read===0 && m.fromUser!==sessionStorage.getItem("username"))
-    const preview=threadMessages[0]
-    div.innerHTML=`<span class="${hasUnread?'mailUnread':''}">To <b>${preview.toUser}</b> - ${preview.subject} ${hasUnread?'<span class="unreadDot"></span>':''}</span>`
-    div.onclick=()=>{ sessionStorage.setItem("threadId", mail.threadId); window.location.href="view.html" }
+
+    const hasUnread=threadMessages.some(
+      m=>m.read===0 && m.fromUser!==sessionStorage.getItem("username")
+    )
+
+    // FIX: newest message preview
+    const preview=threadMessages[threadMessages.length-1]
+
+    div.innerHTML=`
+      <span class="${hasUnread?'mailUnread':''}">
+      To <b>${preview.toUser}</b> - ${preview.subject}
+      ${hasUnread?'<span class="unreadDot"></span>':''}
+      </span>
+    `
+
+    div.onclick=()=>{
+      sessionStorage.setItem("threadId",mail.threadId)
+      window.location.href="view.html"
+    }
+
     list.appendChild(div)
   }
 }
 
 // LOAD THREAD
 async function loadThread(){
-  const threadId=sessionStorage.getItem("threadId"); if(!threadId) return
-  const convo=document.getElementById("conversation"); if(!convo) return
-  const messages=await api("/api/thread?id="+threadId); convo.innerHTML=""
+
+  const threadId=sessionStorage.getItem("threadId")
+
+  if(!threadId) return
+
+  const convo=document.getElementById("conversation")
+
+  if(!convo) return
+
+  const messages=await api("/api/thread?id="+threadId)
+
+  convo.innerHTML=""
+
   for(const m of messages){
-    const div=document.createElement("div"); div.className="message"
-    div.innerHTML=`<b class="${m.read?'':'mailUnread'}">${m.fromUser}</b> ${m.read?'':'<span class="unreadDot"></span>'}<p>${m.body}</p><hr>`
+
+    const div=document.createElement("div")
+
+    div.className="message"
+
+    div.innerHTML=`
+      <b class="${m.read?'':'mailUnread'}">${m.fromUser}</b>
+      ${m.read?'':'<span class="unreadDot"></span>'}
+      <p>${m.body}</p>
+      <hr>
+    `
+
     convo.appendChild(div)
-    if(!m.read) await api("/api/mark-read","POST",{id:m.id})
+
+    if(!m.read){
+      await api("/api/mark-read","POST",{id:m.id})
+    }
   }
 }
 
 // DELETE THREAD
 async function deleteThread(){
-  const threadId=sessionStorage.getItem("threadId"); if(!threadId) return alert("No thread selected")
+
+  const threadId=sessionStorage.getItem("threadId")
+
+  if(!threadId) return alert("No thread selected")
+
   const messages=await api("/api/thread?id="+threadId)
-  for(const m of messages) await api("/api/delete","POST",{id:m.id})
+
+  for(const m of messages){
+
+    await api("/api/delete","POST",{id:m.id})
+
+  }
+
   window.location.href="inbox.html"
 }
 
 // REPLY
-function reply(){ const threadId=sessionStorage.getItem("threadId"); if(!threadId) return; sessionStorage.setItem("replyThread",threadId); window.location.href="reply.html" }
+function reply(){
+
+  const threadId=sessionStorage.getItem("threadId")
+
+  if(!threadId) return
+
+  sessionStorage.setItem("replyThread",threadId)
+
+  window.location.href="reply.html"
+}
 
 // ADMIN USERS
-async function loadUsers(){ const users=await api("/api/users"); const list=document.getElementById("userList"); if(!list) return; list.innerHTML=""; users.forEach(u=>{ const div=document.createElement("div"); div.innerHTML=u.username+' <button onclick="deleteUser(\''+u.username+'\')">Delete</button>'; list.appendChild(div)}) }
-async function deleteUser(username){ await api("/api/delete-user","POST",{username}); loadUsers() }
+async function loadUsers(){
+
+  const users=await api("/api/users")
+
+  const list=document.getElementById("userList")
+
+  if(!list) return
+
+  list.innerHTML=""
+
+  users.forEach(u=>{
+
+    const div=document.createElement("div")
+
+    div.innerHTML=u.username+' <button onclick="deleteUser(\''+u.username+'\')">Delete</button>'
+
+    list.appendChild(div)
+
+  })
+}
+
+async function deleteUser(username){
+
+  await api("/api/delete-user","POST",{username})
+
+  loadUsers()
+
+}
 
 // DOM READY
 document.addEventListener("DOMContentLoaded",()=>{
+
   if(document.getElementById("conversation")) loadThread()
+
   if(document.getElementById("mailList")){
+
     const page=window.location.pathname.split("/").pop()
+
     if(page==="inbox.html") loadInbox()
+
     if(page==="sent.html") loadSent()
+
   }
+
 })

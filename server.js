@@ -76,7 +76,7 @@ app.post("/api/send", (req, res) => {
 
   const { toUser, subject, body, threadId } = req.body
 
-  // Reply to existing thread
+  // reply to existing thread
   if (threadId) {
     db.run(
       `INSERT INTO messages(fromUser,toUser,subject,body,threadId)
@@ -85,7 +85,7 @@ app.post("/api/send", (req, res) => {
       err => res.json({ success: !err })
     )
   }
-  // New thread
+  // new thread
   else {
     db.run(
       `INSERT INTO messages(fromUser,toUser,subject,body,threadId)
@@ -106,17 +106,19 @@ app.post("/api/send", (req, res) => {
 app.get("/api/inbox-collapsed", (req, res) => {
   if (!req.session.user) return res.json([])
 
+  const user = req.session.user
+
   db.all(`
     SELECT m.*
     FROM messages m
     INNER JOIN (
-      SELECT threadId, MAX(id) as maxId
+      SELECT threadId, MAX(id) as lastId
       FROM messages
-      WHERE toUser = ?
+      WHERE toUser = ? OR fromUser = ?
       GROUP BY threadId
-    ) t ON m.threadId = t.threadId AND m.id = t.maxId
+    ) t ON m.id = t.lastId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => res.json(rows))
+  `, [user, user], (err, rows) => res.json(rows))
 })
 
 // ----------------------
@@ -125,17 +127,19 @@ app.get("/api/inbox-collapsed", (req, res) => {
 app.get("/api/sent-collapsed", (req, res) => {
   if (!req.session.user) return res.json([])
 
+  const user = req.session.user
+
   db.all(`
     SELECT m.*
     FROM messages m
     INNER JOIN (
-      SELECT threadId, MAX(id) as maxId
+      SELECT threadId, MAX(id) as lastId
       FROM messages
-      WHERE fromUser = ?
+      WHERE fromUser = ? OR toUser = ?
       GROUP BY threadId
-    ) t ON m.threadId = t.threadId AND m.id = t.maxId
+    ) t ON m.id = t.lastId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => res.json(rows))
+  `, [user, user], (err, rows) => res.json(rows))
 })
 
 // ----------------------

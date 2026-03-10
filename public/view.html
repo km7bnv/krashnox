@@ -5,28 +5,28 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 
-<body>
+<body onload="loadConversation()">
 
 <div class="container">
 
-  <!-- Sidebar -->
   <div class="sidebar">
     <button onclick="location.href='compose.html'">Compose</button>
     <button onclick="location.href='inbox.html'">Inbox</button>
     <button onclick="location.href='sent.html'">Sent</button>
-    <button onclick="location.href"='index.html'>Logout</button>
+    <button onclick="location.href='index.html'">Logout</button>
   </div>
 
-  <!-- Main content -->
   <div class="main">
-    <h2 id="viewSubject">Message Subject</h2>
-    <p><b>From:</b> <span id="viewFrom"></span></p>
-    <p><b>To:</b> <span id="viewTo"></span></p>
-    <hr>
-    <p id="viewBody"></p>
-    
-    <button id="replyBtn">Reply</button>
-    <button onclick="deleteMessage()">Delete</button>
+
+    <h2 id="viewSubject"></h2>
+
+    <div id="conversation"></div>
+
+    <br>
+
+    <button onclick="replyMessage()" id="replyBtn">Reply</button>
+    <button onclick="deleteMessage()" id="deleteBtn">Delete</button>
+
   </div>
 
 </div>

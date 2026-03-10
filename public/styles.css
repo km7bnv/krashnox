@@ -186,4 +186,25 @@ button#sendBtn:hover, #replyBtn:hover {
   .main {
     padding: 10px;
   }
+  .message {
+  background: var(--panel-color);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+#conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#deleteBtn {
+  background: #ef4444;
+  margin-left: 10px;
+}
+
+#deleteBtn:hover {
+  background: #dc2626;
+}
 }

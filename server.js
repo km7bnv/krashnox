@@ -16,7 +16,7 @@ app.use(session({
 app.use(express.static("public"))
 
 // ----------------------
-// DATABASE
+// DATABASE SETUP
 // ----------------------
 db.run(`
 CREATE TABLE IF NOT EXISTS users(

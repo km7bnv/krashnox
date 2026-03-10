@@ -1,153 +1,149 @@
-const express = require("express")
-const session = require("express-session")
-const sqlite3 = require("sqlite3").verbose()
-const path = require("path")
+// -------------------
+// API HELPER
+// -------------------
+async function api(url,method="GET",data=null){
+  const options={method,headers:{}}
+  if(data){options.headers["Content-Type"]="application/json";options.body=JSON.stringify(data)}
+  const res=await fetch(url,options)
+  return res.json()
+}
 
-const app = express()
-const db = new sqlite3.Database("./database.db")
-
-app.use(express.json())
-app.use(session({
-  secret:"secret123",
-  resave:false,
-  saveUninitialized:false
-}))
-
-app.use(express.static("public"))
-
-// ----------------------
-// DATABASE
-// ----------------------
-db.run(`
-CREATE TABLE IF NOT EXISTS users(
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- username TEXT UNIQUE,
- password TEXT
-)
-`)
-
-db.run(`
-CREATE TABLE IF NOT EXISTS messages(
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- fromUser TEXT,
- toUser TEXT,
- subject TEXT,
- body TEXT,
- threadId INTEGER,
- read INTEGER DEFAULT 0
-)
-`)
-
-// ----------------------
+// -------------------
 // LOGIN / SIGNUP
-// ----------------------
-app.post("/login",(req,res)=>{
-  const {username,password} = req.body
-  if(username==="admin" && password==="adminpass"){
-    req.session.user="admin"
-    req.session.admin=true
-    return res.json({success:true,isAdmin:true})
-  }
-  db.get("SELECT * FROM users WHERE username=?",[username],(err,user)=>{
-    if(!user) return res.json({success:false,error:"User not found"})
-    if(password!==user.password) return res.json({success:false,error:"Wrong password"})
-    req.session.user=username
-    res.json({success:true})
-  })
-})
+// -------------------
+async function login(){
+  const username=document.getElementById("username").value
+  const password=document.getElementById("password").value
+  const res=await api("/login","POST",{username,password})
+  if(res.success){window.location.href=res.isAdmin?"admin.html":"inbox.html"}
+  else alert(res.error)
+}
 
-app.post("/signup",(req,res)=>{
-  const {username,password} = req.body
-  db.run("INSERT INTO users(username,password) VALUES(?,?)",[username,password],err=>{
-    if(err) return res.json({success:false,error:"Username exists"})
-    res.json({success:true})
-  })
-})
+async function signup(){
+  const username=document.getElementById("username").value
+  const password=document.getElementById("password").value
+  const res=await api("/signup","POST",{username,password})
+  if(res.success){alert("Account created");window.location.href="login.html"}
+  else alert(res.error)
+}
 
-app.post("/logout",(req,res)=>{
-  req.session.destroy(()=>res.json({success:true}))
-})
+// -------------------
+// LOGOUT
+// -------------------
+async function logout(){await api("/logout","POST");window.location.href="index.html"}
 
-// ----------------------
+// -------------------
 // SEND MESSAGE
-// ----------------------
-app.post("/api/send",(req,res)=>{
-  if(!req.session.user) return res.json({success:false,error:"Not logged in"})
-  const {toUser,subject,body,threadId} = req.body
-  const tId = threadId || Date.now()
-  db.run(
-    `INSERT INTO messages(fromUser,toUser,subject,body,threadId)
-     VALUES(?,?,?,?,?)`,
-    [req.session.user,toUser,subject,body,tId],
-    err=>res.json({success:!err})
-  )
-})
+// -------------------
+async function sendMessage(){
+  const toUser=document.getElementById("to").value
+  const subject=document.getElementById("subject").value
+  const body=document.getElementById("body").value
+  const threadId=sessionStorage.getItem("replyThread")
+  const res=await api("/api/send","POST",{toUser,subject,body,threadId})
+  if(res.success){window.location.href="sent.html"}
+}
 
-// ----------------------
-// INBOX (collapsed threads)
-// ----------------------
-app.get("/api/inbox-collapsed",(req,res)=>{
-  if(!req.session.user) return res.json([])
-  db.all(`
-    SELECT * FROM messages
-    WHERE toUser=?
-    GROUP BY threadId
-    ORDER BY MAX(id) DESC
-  `, [req.session.user], (err, rows) => res.json(rows))
-})
+// -------------------
+// LOAD INBOX (collapsed threads)
+// -------------------
+async function loadInbox(){
+  const mails = await api("/api/inbox-collapsed")
+  const list = document.getElementById("mailList")
+  list.innerHTML = ""
 
-// ----------------------
-// SENT
-// ----------------------
-app.get("/api/sent",(req,res)=>{
-  if(!req.session.user) return res.json([])
-  db.all("SELECT * FROM messages WHERE fromUser=? ORDER BY id DESC",[req.session.user],(err,rows)=>res.json(rows))
-})
+  mails.forEach(mail=>{
+    const div = document.createElement("div")
+    div.className = "mailItem"
 
-// ----------------------
-// THREAD
-// ----------------------
-app.get("/api/thread",(req,res)=>{
-  const threadId=req.query.id
-  db.all("SELECT * FROM messages WHERE threadId=? ORDER BY id",[threadId],(err,rows)=>res.json(rows))
-})
+    const unreadClass = mail.read ? "" : "mailUnread"
+    const unreadDot = mail.read ? "" : '<span class="unreadDot"></span>'
 
-// ----------------------
+    div.innerHTML = `<span class="${unreadClass}"><b>${mail.fromUser}</b> - ${mail.subject} ${unreadDot}</span>`
+
+    div.onclick = ()=>{
+      sessionStorage.setItem("threadId", mail.threadId)
+      window.location.href="view.html"
+    }
+
+    list.appendChild(div)
+  })
+}
+
+// -------------------
+// LOAD SENT
+// -------------------
+async function loadSent(){
+  const mails = await api("/api/sent")
+  const list = document.getElementById("mailList")
+  list.innerHTML = ""
+  mails.forEach(mail=>{
+    const div = document.createElement("div")
+    div.className = "mailItem"
+    div.innerHTML=`<span>To <b>${mail.toUser}</b></span> <span>${mail.subject}</span>`
+    div.onclick = ()=>{
+      sessionStorage.setItem("threadId", mail.threadId)
+      window.location.href="view.html"
+    }
+    list.appendChild(div)
+  })
+}
+
+// -------------------
+// LOAD THREAD VIEW
+// -------------------
+async function loadThread(){
+  const threadId = sessionStorage.getItem("threadId")
+  const messages = await api("/api/thread?id="+threadId)
+  const convo = document.getElementById("conversation")
+  convo.innerHTML = ""
+
+  for(const m of messages){
+    const div = document.createElement("div")
+    div.className = "message"
+    div.innerHTML = `
+      <b>${m.fromUser}</b>
+      <p>${m.body}</p>
+      <button onclick="deleteMessage(${m.id})">Delete</button>
+      <hr>
+    `
+    convo.appendChild(div)
+    if(!m.read) await api("/api/mark-read","POST",{id:m.id})
+  }
+}
+
+// -------------------
 // DELETE MESSAGE
-// ----------------------
-app.post("/api/delete",(req,res)=>{
-  const {id}=req.body
-  db.run("DELETE FROM messages WHERE id=? AND (toUser=? OR fromUser=?)",[id,req.session.user,req.session.user],err=>res.json({success:!err}))
-})
+// -------------------
+async function deleteMessage(id){
+  const res = await api("/api/delete","POST",{id})
+  if(res.success) loadThread()
+}
 
-// ----------------------
-// MARK AS READ
-// ----------------------
-app.post("/api/mark-read",(req,res)=>{
-  const {id}=req.body
-  db.run("UPDATE messages SET read=1 WHERE id=?",[id],err=>res.json({success:!err}))
-})
+// -------------------
+// REPLY
+// -------------------
+function reply(){
+  const threadId = sessionStorage.getItem("threadId")
+  sessionStorage.setItem("replyThread", threadId)
+  window.location.href="compose.html"
+}
 
-// ----------------------
+// -------------------
 // ADMIN USERS
-// ----------------------
-app.get("/api/users",(req,res)=>{
-  if(!req.session.admin) return res.json([])
-  db.all("SELECT username FROM users",(err,rows)=>res.json(rows))
-})
+// -------------------
+async function loadUsers(){
+  const users = await api("/api/users")
+  const list = document.getElementById("userList")
+  list.innerHTML = ""
+  users.forEach(u=>{
+    const div = document.createElement("div")
+    div.innerHTML = u.username+' <button onclick="deleteUser(\''+u.username+'\')">Delete</button>'
+    list.appendChild(div)
+  })
+}
 
-app.post("/api/delete-user",(req,res)=>{
-  if(!req.session.admin) return res.json({success:false})
-  const {username}=req.body
-  db.run("DELETE FROM users WHERE username=?",[username],err=>res.json({success:!err}))
-})
-
-// ----------------------
-// PROTECT ADMIN PAGE
-// ----------------------
-app.get("/admin.html",(req,res)=>{
-  if(!req.session.admin) return res.redirect("/login.html")
-  res.sendFile(path.join(__dirname,"public/admin.html"))
-})
-
-app.listen(3000,()=>console.log("Server running"))
+async function deleteUser(username){
+  await api("/api/delete-user","POST",{username})
+  loadUsers()
+}

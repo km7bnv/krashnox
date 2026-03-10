@@ -1,58 +1,67 @@
 // -------------------
 // API HELPER
 // -------------------
-async function api(url,method="GET",data=null){
-  const options={method,headers:{}}
-  if(data){options.headers["Content-Type"]="application/json";options.body=JSON.stringify(data)}
-  const res=await fetch(url,options)
+async function api(url, method = "GET", data = null) {
+  const options = { method, headers: {} }
+  if (data) {
+    options.headers["Content-Type"] = "application/json"
+    options.body = JSON.stringify(data)
+  }
+  const res = await fetch(url, options)
   return res.json()
 }
 
 // -------------------
 // LOGIN / SIGNUP
 // -------------------
-async function login(){
-  const username=document.getElementById("username").value
-  const password=document.getElementById("password").value
-  const res=await api("/login","POST",{username,password})
-  if(res.success){window.location.href=res.isAdmin?"admin.html":"inbox.html"}
+async function login() {
+  const username = document.getElementById("username").value
+  const password = document.getElementById("password").value
+  const res = await api("/login", "POST", { username, password })
+  if (res.success) window.location.href = res.isAdmin ? "admin.html" : "inbox.html"
   else alert(res.error)
 }
 
-async function signup(){
-  const username=document.getElementById("username").value
-  const password=document.getElementById("password").value
-  const res=await api("/signup","POST",{username,password})
-  if(res.success){alert("Account created");window.location.href="login.html"}
-  else alert(res.error)
+async function signup() {
+  const username = document.getElementById("username").value
+  const password = document.getElementById("password").value
+  const res = await api("/signup", "POST", { username, password })
+  if (res.success) {
+    alert("Account created")
+    window.location.href = "login.html"
+  } else alert(res.error)
 }
 
 // -------------------
 // LOGOUT
 // -------------------
-async function logout(){await api("/logout","POST");window.location.href="index.html"}
+async function logout() {
+  await api("/logout", "POST")
+  window.location.href = "index.html"
+}
 
 // -------------------
 // SEND MESSAGE
 // -------------------
-async function sendMessage(){
-  const toUser=document.getElementById("to").value
-  const subject=document.getElementById("subject").value
-  const body=document.getElementById("body").value
-  const threadId=sessionStorage.getItem("replyThread")
-  const res=await api("/api/send","POST",{toUser,subject,body,threadId})
-  if(res.success){window.location.href="sent.html"}
+async function sendMessage() {
+  const toUser = document.getElementById("to").value
+  const subject = document.getElementById("subject").value
+  const body = document.getElementById("body").value
+  const threadId = sessionStorage.getItem("replyThread")
+  const res = await api("/api/send", "POST", { toUser, subject, body, threadId })
+  if (res.success) window.location.href = "sent.html"
 }
 
 // -------------------
 // LOAD INBOX (collapsed threads)
 // -------------------
-async function loadInbox(){
+async function loadInbox() {
   const mails = await api("/api/inbox-collapsed")
   const list = document.getElementById("mailList")
+  if (!list) return
   list.innerHTML = ""
 
-  mails.forEach(mail=>{
+  mails.forEach(mail => {
     const div = document.createElement("div")
     div.className = "mailItem"
 
@@ -61,9 +70,9 @@ async function loadInbox(){
 
     div.innerHTML = `<span class="${unreadClass}"><b>${mail.fromUser}</b> - ${mail.subject} ${unreadDot}</span>`
 
-    div.onclick = ()=>{
+    div.onclick = () => {
       sessionStorage.setItem("threadId", mail.threadId)
-      window.location.href="view.html"
+      window.location.href = "view.html"
     }
 
     list.appendChild(div)
@@ -73,17 +82,18 @@ async function loadInbox(){
 // -------------------
 // LOAD SENT
 // -------------------
-async function loadSent(){
+async function loadSent() {
   const mails = await api("/api/sent")
   const list = document.getElementById("mailList")
+  if (!list) return
   list.innerHTML = ""
-  mails.forEach(mail=>{
+  mails.forEach(mail => {
     const div = document.createElement("div")
     div.className = "mailItem"
-    div.innerHTML=`<span>To <b>${mail.toUser}</b></span> <span>${mail.subject}</span>`
-    div.onclick = ()=>{
+    div.innerHTML = `<span>To <b>${mail.toUser}</b></span> <span>${mail.subject}</span>`
+    div.onclick = () => {
       sessionStorage.setItem("threadId", mail.threadId)
-      window.location.href="view.html"
+      window.location.href = "view.html"
     }
     list.appendChild(div)
   })
@@ -92,58 +102,74 @@ async function loadSent(){
 // -------------------
 // LOAD THREAD VIEW
 // -------------------
-async function loadThread(){
+async function loadThread() {
   const threadId = sessionStorage.getItem("threadId")
-  const messages = await api("/api/thread?id="+threadId)
+  if (!threadId) return
   const convo = document.getElementById("conversation")
+  if (!convo) return
+  const messages = await api("/api/thread?id=" + threadId)
   convo.innerHTML = ""
 
-  for(const m of messages){
+  for (const m of messages) {
     const div = document.createElement("div")
     div.className = "message"
     div.innerHTML = `
       <b>${m.fromUser}</b>
       <p>${m.body}</p>
-      <button onclick="deleteMessage(${m.id})">Delete</button>
       <hr>
     `
     convo.appendChild(div)
-    if(!m.read) await api("/api/mark-read","POST",{id:m.id})
+    if (!m.read) await api("/api/mark-read", "POST", { id: m.id })
   }
 }
 
 // -------------------
 // DELETE MESSAGE
 // -------------------
-async function deleteMessage(id){
-  const res = await api("/api/delete","POST",{id})
-  if(res.success) loadThread()
+async function deleteMessage(id) {
+  if (!id) return
+  const res = await api("/api/delete", "POST", { id })
+  if (res.success) loadThread()
 }
 
 // -------------------
 // REPLY
 // -------------------
-function reply(){
+function reply() {
   const threadId = sessionStorage.getItem("threadId")
+  if (!threadId) return
   sessionStorage.setItem("replyThread", threadId)
-  window.location.href="compose.html"
+  window.location.href = "compose.html"
 }
 
 // -------------------
 // ADMIN USERS
 // -------------------
-async function loadUsers(){
+async function loadUsers() {
   const users = await api("/api/users")
   const list = document.getElementById("userList")
+  if (!list) return
   list.innerHTML = ""
-  users.forEach(u=>{
+  users.forEach(u => {
     const div = document.createElement("div")
-    div.innerHTML = u.username+' <button onclick="deleteUser(\''+u.username+'\')">Delete</button>'
+    div.innerHTML = u.username + ' <button onclick="deleteUser(\'' + u.username + '\')">Delete</button>'
     list.appendChild(div)
   })
 }
 
-async function deleteUser(username){
-  await api("/api/delete-user","POST",{username})
+async function deleteUser(username) {
+  await api("/api/delete-user", "POST", { username })
   loadUsers()
 }
+
+// -------------------
+// DOM READY HOOK (needed changes)
+// -------------------
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById("conversation")) loadThread()
+  if (document.getElementById("mailList")) {
+    const page = window.location.pathname.split("/").pop()
+    if (page === "inbox.html") loadInbox()
+    if (page === "sent.html") loadSent()
+  }
+})

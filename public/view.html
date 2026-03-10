@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 
-<body onload="loadConversation()">
+<body>
 
 <div class="container">
 
@@ -22,17 +22,17 @@
 
     <div id="conversation"></div>
 
-    <br>
-    <br>
-    <br>
-
-    <button onclick="replyMessage()" id="replyBtn">Reply</button>
-    <button onclick="deleteMessage()" id="deleteBtn">Delete</button>
-
   </div>
 
 </div>
 
 <script src="client.js"></script>
+<script>
+  // Ensure thread loads after DOM is ready
+  document.addEventListener("DOMContentLoaded", ()=>{
+    loadThread();
+  });
+</script>
+
 </body>
 </html>

@@ -293,3 +293,29 @@ async function deleteUser(username){
   loadUsers();
 
 }
+
+async function logout(){
+
+  try{
+
+    const res = await fetch("/logout",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      }
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+      window.location.href="index.html";
+    }else{
+      alert("Logout failed");
+    }
+
+  }catch(err){
+    console.error(err);
+    window.location.href="index.html";
+  }
+
+}

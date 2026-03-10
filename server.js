@@ -14,6 +14,16 @@ app.use(session({
   saveUninitialized:false
 }));
 
+app.get("/admin.html",(req,res)=>{
+
+  if(!req.session.admin){
+    return res.redirect("/login.html");
+  }
+
+  res.sendFile(__dirname + "/public/admin.html");
+
+});
+
 app.use(express.static("public"));
 
 
@@ -245,6 +255,24 @@ app.post("/api/delete-user",(req,res)=>{
       else res.json({success:true});
     }
   );
+
+});
+
+// ======================
+// LOGOUT
+// ======================
+
+app.post("/logout",(req,res)=>{
+
+  req.session.destroy(err=>{
+
+    if(err){
+      return res.json({success:false});
+    }
+
+    res.json({success:true});
+
+  });
 
 });
 

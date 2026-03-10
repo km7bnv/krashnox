@@ -63,18 +63,20 @@ async function loadInbox() {
 
   mails.forEach(mail => {
     const div = document.createElement("div")
-    div.className = "mailItem"
+    div.className = "mail-item"
 
     const unreadClass = mail.read ? "" : "mailUnread"
     const unreadDot = mail.read ? "" : '<span class="unreadDot"></span>'
 
-    div.innerHTML = `<span class="${unreadClass}"><b>${mail.fromUser}</b> - ${mail.subject} ${unreadDot}</span>`
-
+    div.innerHTML = `
+      <span class="${unreadClass}">
+        <b>${mail.fromUser}</b> - ${mail.subject} ${unreadDot}
+      </span>
+    `
     div.onclick = () => {
       sessionStorage.setItem("threadId", mail.threadId)
       window.location.href = "view.html"
     }
-
     list.appendChild(div)
   })
 }
@@ -87,9 +89,10 @@ async function loadSent() {
   const list = document.getElementById("mailList")
   if (!list) return
   list.innerHTML = ""
+
   mails.forEach(mail => {
     const div = document.createElement("div")
-    div.className = "mailItem"
+    div.className = "mail-item"
     div.innerHTML = `<span>To <b>${mail.toUser}</b></span> <span>${mail.subject}</span>`
     div.onclick = () => {
       sessionStorage.setItem("threadId", mail.threadId)
@@ -113,23 +116,30 @@ async function loadThread() {
   for (const m of messages) {
     const div = document.createElement("div")
     div.className = "message"
+    const unreadClass = m.read ? "" : "mailUnread"
+    const unreadDot = m.read ? "" : '<span class="unreadDot"></span>'
     div.innerHTML = `
-      <b>${m.fromUser}</b>
+      <b class="${unreadClass}">${m.fromUser}</b> ${unreadDot}
       <p>${m.body}</p>
       <hr>
     `
     convo.appendChild(div)
+
     if (!m.read) await api("/api/mark-read", "POST", { id: m.id })
   }
 }
 
 // -------------------
-// DELETE MESSAGE
+// DELETE ENTIRE THREAD
 // -------------------
-async function deleteMessage(id) {
-  if (!id) return
-  const res = await api("/api/delete", "POST", { id })
-  if (res.success) loadThread()
+async function deleteThread() {
+  const threadId = sessionStorage.getItem("threadId")
+  if (!threadId) return alert("No thread selected")
+  const messages = await api("/api/thread?id=" + threadId)
+  for (const m of messages) {
+    await api("/api/delete", "POST", { id: m.id })
+  }
+  window.location.href = "inbox.html"
 }
 
 // -------------------
@@ -163,7 +173,7 @@ async function deleteUser(username) {
 }
 
 // -------------------
-// DOM READY HOOK (needed changes)
+// DOM READY HOOK
 // -------------------
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("conversation")) loadThread()

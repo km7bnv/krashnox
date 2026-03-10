@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>View Message</title>
-<link rel="stylesheet" href="styles.css">
+  <title>View Message</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -22,11 +22,10 @@
 
     <div id="conversation"></div>
 
-    <br>
-    <br>
-    <br>
-    <button onclick="reply()">Reply</button>
-    <button onclick="deleteMessage()">Delete</button>
+    <div style="margin-top:20px;">
+      <button onclick="reply()" id="replyBtn">Reply</button>
+      <button onclick="deleteThread()" id="deleteThreadBtn">Delete Thread</button>
+    </div>
 
   </div>
 
@@ -34,10 +33,25 @@
 
 <script src="client.js"></script>
 <script>
-  // Ensure thread loads after DOM is ready
-  document.addEventListener("DOMContentLoaded", ()=>{
-    loadThread();
-  });
+  document.addEventListener("DOMContentLoaded", async () => {
+    const threadId = sessionStorage.getItem("threadId")
+    if (!threadId) return
+
+    // Load subject
+    const messages = await api("/api/thread?id=" + threadId)
+    if (messages.length > 0) {
+      document.getElementById("viewSubject").textContent = messages[0].subject || "No Subject"
+    }
+  })
+
+  async function api(url, method = "GET", data = null) {
+    const options = { method, headers: {} }
+    if (data) {
+      options.headers["Content-Type"] = "application/json"
+      options.body = JSON.stringify(data)
+    }
+    return (await fetch(url, options)).json()
+  }
 </script>
 
 </body>

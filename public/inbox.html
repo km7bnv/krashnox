@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Inbox</title>
-<link rel="stylesheet" href="styles.css">
+  <title>Inbox</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 
-<body onload="loadInbox()">
+<body>
 
 <div class="container">
 
-  <!-- Sidebar -->
   <div class="sidebar">
     <button onclick="location.href='compose.html'">Compose</button>
     <button onclick="location.href='inbox.html'">Inbox</button>
@@ -17,16 +16,20 @@
     <button onclick="logout()">Logout</button>
   </div>
 
-  <!-- Main content -->
   <div class="main">
     <h2>Inbox</h2>
-
     <div id="mailList" class="mailList"></div>
-
   </div>
 
 </div>
 
 <script src="client.js"></script>
+<script>
+  // Load inbox after DOM is ready
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.getElementById("mailList")) loadInbox()
+  })
+</script>
+
 </body>
 </html>

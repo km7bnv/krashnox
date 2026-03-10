@@ -1,36 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Inbox</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="client.js"></script>
+<title>Inbox</title>
+<link rel="stylesheet" href="styles.css">
 </head>
-<body onload="loadInbox()">
 
-  <header>
-    <h1>Inbox</h1>
-    <button onclick="window.location.href='compose.html'">Compose</button>
-    <button onclick="window.location.href='inbox.html'">Inbox</button>
-    <button onclick="window.location.href='sent.html'">Sent</button>
-    <button onclick="window.location.href='login.html'">Logout</button>
-  </header>
+<body>
 
-  <main>
-    <div id="mailList">
-      <!-- Messages will be injected here by client.js -->
-    </div>
-  </main>
+<div class="container">
 
-  <style>
-    body { font-family: Arial; background: #0f172a; color: #f1f5f9; padding: 20px; }
-    header { display: flex; gap: 10px; margin-bottom: 20px; }
-    button { background: #6366f1; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #4f46e5; }
-    #mailList { display: flex; flex-direction: column; gap: 10px; }
-    .mail-item { padding: 10px; background: #1e293b; border-radius: 8px; cursor: pointer; }
-    .mail-item:hover { background: #334155; }
-  </style>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <button onclick="location.href='compose.html'">Compose</button>
+    <button onclick="location.href='inbox.html'">Inbox</button>
+    <button onclick="location.href='sent.html'">Sent</button>
+    <button onclick="location.href='index.html'">Logout</button>
+  </div>
 
+  <!-- Main content -->
+  <div class="main">
+    <h2>Inbox</h2>
+    <div id="mailList" class="mailList"></div>
+  </div>
+
+</div>
+
+<script src="client.js"></script>
 </body>
 </html>

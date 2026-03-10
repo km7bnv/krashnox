@@ -101,24 +101,27 @@ button:hover {
 =========================== */
 .mailList {
   width: 100%;
-  border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.mailItem {
+.mail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--panel-color);
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
-.mailItem:hover {
+.mail-item:hover {
   background-color: #273449;
 }
 
-.mailItem span {
+.mail-item span {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;

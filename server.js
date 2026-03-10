@@ -99,7 +99,17 @@ app.get("/api/inbox-collapsed",(req,res)=>{
       GROUP BY threadId
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => res.json(rows))
+  `, [req.session.user], (err, rows) => {
+    // Remove duplicates caused by self-sent messages
+    const seen = new Set()
+    const filtered = rows.filter(r=>{
+      const key = r.threadId + '-' + r.fromUser + '-' + r.toUser
+      if(seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    res.json(filtered)
+  })
 })
 
 // ----------------------
@@ -118,7 +128,16 @@ app.get("/api/sent-collapsed",(req,res)=>{
       GROUP BY threadId
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => res.json(rows))
+  `, [req.session.user], (err, rows) => {
+    const seen = new Set()
+    const filtered = rows.filter(r=>{
+      const key = r.threadId + '-' + r.fromUser + '-' + r.toUser
+      if(seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    res.json(filtered)
+  })
 })
 
 // ----------------------
@@ -167,4 +186,4 @@ app.get("/admin.html",(req,res)=>{
   res.sendFile(path.join(__dirname,"public/admin.html"))
 })
 
-app.listen(3000,()=>console.log("Server running"))
+app.listen(3000,()=>console.log("Server running on port 3000"))

@@ -13,11 +13,10 @@ app.use(session({
   saveUninitialized:false
 }))
 
-// Serve public files
 app.use(express.static("public"))
 
 // ----------------------
-// DATABASE SETUP
+// DATABASE
 // ----------------------
 db.run(`
 CREATE TABLE IF NOT EXISTS users(
@@ -40,18 +39,15 @@ CREATE TABLE IF NOT EXISTS messages(
 `)
 
 // ----------------------
-// LOGIN / SIGNUP (simplified)
+// LOGIN / SIGNUP
 // ----------------------
 app.post("/login",(req,res)=>{
   const {username,password} = req.body
-
-  // admin hardcoded
   if(username==="admin" && password==="adminpass"){
     req.session.user="admin"
     req.session.admin=true
     return res.json({success:true,isAdmin:true})
   }
-
   db.get("SELECT * FROM users WHERE username=?",[username],(err,user)=>{
     if(!user) return res.json({success:false,error:"User not found"})
     if(password!==user.password) return res.json({success:false,error:"Wrong password"})
@@ -88,14 +84,14 @@ app.post("/api/send",(req,res)=>{
 })
 
 // ----------------------
-// INBOX (collapsed)
+// INBOX (collapsed threads)
 // ----------------------
 app.get("/api/inbox-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
   db.all(`
-    SELECT * FROM messages 
-    WHERE toUser=? 
-    GROUP BY threadId 
+    SELECT * FROM messages
+    WHERE toUser=?
+    GROUP BY threadId
     ORDER BY MAX(id) DESC
   `, [req.session.user], (err, rows) => res.json(rows))
 })
@@ -147,7 +143,7 @@ app.post("/api/delete-user",(req,res)=>{
 })
 
 // ----------------------
-// ADMIN PAGE PROTECTION
+// PROTECT ADMIN PAGE
 // ----------------------
 app.get("/admin.html",(req,res)=>{
   if(!req.session.admin) return res.redirect("/login.html")

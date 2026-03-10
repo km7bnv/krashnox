@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Reply</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="sidebar">
+    <button onclick="location.href='compose.html'">Compose</button>
+    <button onclick="location.href='inbox.html'">Inbox</button>
+    <button onclick="location.href='sent.html'">Sent</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="main">
+
+    <h2 id="composeTitle">Reply</h2>
+
+    <!-- No To field -->
+    <input type="text" id="subject" placeholder="Subject" readonly>
+    <textarea id="body" placeholder="Write your reply here..."></textarea>
+
+    <button onclick="sendMessage()" id="sendBtn">Send</button>
+
+  </div>
+
+</div>
+
+<script src="client.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    const threadId = sessionStorage.getItem("replyThread")
+    if (!threadId) return
+
+    // Prefill the subject from the original thread
+    const messages = await api("/api/thread?id=" + threadId)
+    if (messages.length > 0) {
+      document.getElementById("subject").value = messages[0].subject
+    }
+  })
+</script>
+
+</body>
+</html>

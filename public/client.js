@@ -44,12 +44,15 @@ async function logout() {
 // SEND MESSAGE
 // -------------------
 async function sendMessage() {
-  const toUser = document.getElementById("to").value
   const subject = document.getElementById("subject").value
   const body = document.getElementById("body").value
   const threadId = sessionStorage.getItem("replyThread")
-  const res = await api("/api/send", "POST", { toUser, subject, body, threadId })
-  if (res.success) window.location.href = "sent.html"
+  const res = await api("/api/send", "POST", { toUser: null, subject, body, threadId })
+
+  if (res.success) {
+    sessionStorage.removeItem("replyThread")
+    window.location.href = "view.html" // go back to thread view
+  }
 }
 
 // -------------------
@@ -61,12 +64,15 @@ async function loadInbox() {
   if (!list) return
   list.innerHTML = ""
 
-  mails.forEach(mail => {
+  for (const mail of mails) {
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    const unreadClass = mail.read ? "" : "mailUnread"
-    const unreadDot = mail.read ? "" : '<span class="unreadDot"></span>'
+    // Check if any message in this thread is unread
+    const threadMessages = await api("/api/thread?id=" + mail.threadId)
+    const hasUnread = threadMessages.some(m => m.read === 0)
+    const unreadClass = hasUnread ? "mailUnread" : ""
+    const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
 
     div.innerHTML = `
       <span class="${unreadClass}">
@@ -78,7 +84,7 @@ async function loadInbox() {
       window.location.href = "view.html"
     }
     list.appendChild(div)
-  })
+  }
 }
 
 // -------------------
@@ -90,16 +96,27 @@ async function loadSent() {
   if (!list) return
   list.innerHTML = ""
 
-  mails.forEach(mail => {
+  for (const mail of mails) {
     const div = document.createElement("div")
     div.className = "mail-item"
-    div.innerHTML = `<span>To <b>${mail.toUser}</b></span> <span>${mail.subject}</span>`
+
+    // Optional: show unread if any recipient hasn't read (requires server support)
+    const threadMessages = await api("/api/thread?id=" + mail.threadId)
+    const hasUnread = threadMessages.some(m => m.read === 0 && m.fromUser !== sessionStorage.getItem("username"))
+    const unreadClass = hasUnread ? "mailUnread" : ""
+    const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
+
+    div.innerHTML = `
+      <span class="${unreadClass}">
+        To <b>${mail.toUser}</b> - ${mail.subject} ${unreadDot}
+      </span>
+    `
     div.onclick = () => {
       sessionStorage.setItem("threadId", mail.threadId)
       window.location.href = "view.html"
     }
     list.appendChild(div)
-  })
+  }
 }
 
 // -------------------
@@ -149,7 +166,7 @@ function reply() {
   const threadId = sessionStorage.getItem("threadId")
   if (!threadId) return
   sessionStorage.setItem("replyThread", threadId)
-  window.location.href = "compose.html"
+  window.location.href = "reply.html"
 }
 
 // -------------------

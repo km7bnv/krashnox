@@ -15,9 +15,7 @@ app.use(session({
 
 app.use(express.static("public"))
 
-// ----------------------
 // DATABASE SETUP
-// ----------------------
 db.run(`
 CREATE TABLE IF NOT EXISTS users(
  id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,9 +36,7 @@ CREATE TABLE IF NOT EXISTS messages(
 )
 `)
 
-// ----------------------
 // LOGIN / SIGNUP
-// ----------------------
 app.post("/login",(req,res)=>{
   const {username,password} = req.body
   if(username==="admin" && password==="adminpass"){
@@ -68,13 +64,12 @@ app.post("/logout",(req,res)=>{
   req.session.destroy(()=>res.json({success:true}))
 })
 
-// ----------------------
 // SEND MESSAGE
-// ----------------------
 app.post("/api/send",(req,res)=>{
   if(!req.session.user) return res.json({success:false,error:"Not logged in"})
   const {toUser,subject,body,threadId} = req.body
-  const tId = threadId || Date.now()
+  let tId = threadId
+  if(!tId) tId = Date.now()
   db.run(
     `INSERT INTO messages(fromUser,toUser,subject,body,threadId)
      VALUES(?,?,?,?,?)`,
@@ -83,8 +78,7 @@ app.post("/api/send",(req,res)=>{
   )
 })
 
-// ----------------------
-// INBOX (collapsed threads, fix self-sent)
+// INBOX COLLAPSED THREADS
 app.get("/api/inbox-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
 
@@ -98,23 +92,21 @@ app.get("/api/inbox-collapsed",(req,res)=>{
       GROUP BY threadId
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => {
-    // remove duplicates for self-sent messages
-    const seenThreads = new Set()
+  `,[req.session.user],(err,rows)=>{
+    // Filter duplicates (self-sent)
     const filtered = []
+    const seen = new Set()
     for(const r of rows){
-      const key = r.threadId
-      if(!seenThreads.has(key)){
+      if(!seen.has(r.threadId)){
         filtered.push(r)
-        seenThreads.add(key)
+        seen.add(r.threadId)
       }
     }
     res.json(filtered)
   })
 })
 
-// ----------------------
-// SENT (collapsed threads, fix self-sent)
+// SENT COLLAPSED THREADS
 app.get("/api/sent-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
 
@@ -128,47 +120,38 @@ app.get("/api/sent-collapsed",(req,res)=>{
       GROUP BY threadId
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
-  `, [req.session.user], (err, rows) => {
-    const seenThreads = new Set()
+  `,[req.session.user],(err,rows)=>{
     const filtered = []
+    const seen = new Set()
     for(const r of rows){
-      const key = r.threadId
-      if(!seenThreads.has(key)){
+      if(!seen.has(r.threadId)){
         filtered.push(r)
-        seenThreads.add(key)
+        seen.add(r.threadId)
       }
     }
     res.json(filtered)
   })
 })
 
-// ----------------------
-// THREAD
-// ----------------------
+// THREAD MESSAGES
 app.get("/api/thread",(req,res)=>{
-  const threadId=req.query.id
+  const threadId = req.query.id
   db.all("SELECT * FROM messages WHERE threadId=? ORDER BY id",[threadId],(err,rows)=>res.json(rows))
 })
 
-// ----------------------
 // DELETE MESSAGE
-// ----------------------
 app.post("/api/delete",(req,res)=>{
-  const {id}=req.body
+  const {id} = req.body
   db.run("DELETE FROM messages WHERE id=? AND (toUser=? OR fromUser=?)",[id,req.session.user,req.session.user],err=>res.json({success:!err}))
 })
 
-// ----------------------
 // MARK AS READ
-// ----------------------
 app.post("/api/mark-read",(req,res)=>{
-  const {id}=req.body
+  const {id} = req.body
   db.run("UPDATE messages SET read=1 WHERE id=?",[id],err=>res.json({success:!err}))
 })
 
-// ----------------------
 // ADMIN USERS
-// ----------------------
 app.get("/api/users",(req,res)=>{
   if(!req.session.admin) return res.json([])
   db.all("SELECT username FROM users",(err,rows)=>res.json(rows))
@@ -176,19 +159,15 @@ app.get("/api/users",(req,res)=>{
 
 app.post("/api/delete-user",(req,res)=>{
   if(!req.session.admin) return res.json({success:false})
-  const {username}=req.body
+  const {username} = req.body
   db.run("DELETE FROM users WHERE username=?",[username],err=>res.json({success:!err}))
 })
 
-// ----------------------
 // PROTECT ADMIN PAGE
-// ----------------------
 app.get("/admin.html",(req,res)=>{
   if(!req.session.admin) return res.redirect("/login.html")
   res.sendFile(path.join(__dirname,"public/admin.html"))
 })
 
-// ----------------------
-// START SERVER
-// ----------------------
+// SERVER START
 app.listen(3000,()=>console.log("Server running on port 3000"))

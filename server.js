@@ -84,8 +84,7 @@ app.post("/api/send",(req,res)=>{
 })
 
 // ----------------------
-// INBOX (collapsed threads)
-// ----------------------
+// INBOX (collapsed threads, fix self-sent)
 app.get("/api/inbox-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
 
@@ -100,21 +99,22 @@ app.get("/api/inbox-collapsed",(req,res)=>{
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
   `, [req.session.user], (err, rows) => {
-    // Remove duplicates caused by self-sent messages
-    const seen = new Set()
-    const filtered = rows.filter(r=>{
-      const key = r.threadId + '-' + r.fromUser + '-' + r.toUser
-      if(seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+    // remove duplicates for self-sent messages
+    const seenThreads = new Set()
+    const filtered = []
+    for(const r of rows){
+      const key = r.threadId
+      if(!seenThreads.has(key)){
+        filtered.push(r)
+        seenThreads.add(key)
+      }
+    }
     res.json(filtered)
   })
 })
 
 // ----------------------
-// SENT (collapsed threads)
-// ----------------------
+// SENT (collapsed threads, fix self-sent)
 app.get("/api/sent-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
 
@@ -129,13 +129,15 @@ app.get("/api/sent-collapsed",(req,res)=>{
     ) t ON m.threadId = t.threadId AND m.id = t.maxId
     ORDER BY m.id DESC
   `, [req.session.user], (err, rows) => {
-    const seen = new Set()
-    const filtered = rows.filter(r=>{
-      const key = r.threadId + '-' + r.fromUser + '-' + r.toUser
-      if(seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+    const seenThreads = new Set()
+    const filtered = []
+    for(const r of rows){
+      const key = r.threadId
+      if(!seenThreads.has(key)){
+        filtered.push(r)
+        seenThreads.add(key)
+      }
+    }
     res.json(filtered)
   })
 })
@@ -186,4 +188,7 @@ app.get("/admin.html",(req,res)=>{
   res.sendFile(path.join(__dirname,"public/admin.html"))
 })
 
+// ----------------------
+// START SERVER
+// ----------------------
 app.listen(3000,()=>console.log("Server running on port 3000"))

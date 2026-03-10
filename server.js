@@ -88,20 +88,37 @@ app.post("/api/send",(req,res)=>{
 // ----------------------
 app.get("/api/inbox-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
+
   db.all(`
-    SELECT * FROM messages
-    WHERE toUser=?
-    GROUP BY threadId
-    ORDER BY MAX(id) DESC
+    SELECT m.*
+    FROM messages m
+    INNER JOIN (
+      SELECT threadId, MAX(id) as maxId
+      FROM messages
+      WHERE toUser = ?
+      GROUP BY threadId
+    ) t ON m.threadId = t.threadId AND m.id = t.maxId
+    ORDER BY m.id DESC
   `, [req.session.user], (err, rows) => res.json(rows))
 })
 
 // ----------------------
-// SENT
+// SENT (collapsed threads)
 // ----------------------
-app.get("/api/sent",(req,res)=>{
+app.get("/api/sent-collapsed",(req,res)=>{
   if(!req.session.user) return res.json([])
-  db.all("SELECT * FROM messages WHERE fromUser=? ORDER BY id DESC",[req.session.user],(err,rows)=>res.json(rows))
+
+  db.all(`
+    SELECT m.*
+    FROM messages m
+    INNER JOIN (
+      SELECT threadId, MAX(id) as maxId
+      FROM messages
+      WHERE fromUser = ?
+      GROUP BY threadId
+    ) t ON m.threadId = t.threadId AND m.id = t.maxId
+    ORDER BY m.id DESC
+  `, [req.session.user], (err, rows) => res.json(rows))
 })
 
 // ----------------------

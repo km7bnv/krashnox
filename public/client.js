@@ -3,10 +3,7 @@
 // -------------------
 async function api(url, method = "GET", data = null) {
   const options = { method, headers: {} }
-  if (data) {
-    options.headers["Content-Type"] = "application/json"
-    options.body = JSON.stringify(data)
-  }
+  if (data) { options.headers["Content-Type"] = "application/json"; options.body = JSON.stringify(data) }
   const res = await fetch(url, options)
   return res.json()
 }
@@ -26,22 +23,17 @@ async function signup() {
   const username = document.getElementById("username").value
   const password = document.getElementById("password").value
   const res = await api("/signup", "POST", { username, password })
-  if (res.success) {
-    alert("Account created")
-    window.location.href = "login.html"
-  } else alert(res.error)
+  if (res.success) { alert("Account created"); window.location.href = "login.html" }
+  else alert(res.error)
 }
 
 // -------------------
 // LOGOUT
 // -------------------
-async function logout() {
-  await api("/logout", "POST")
-  window.location.href = "index.html"
-}
+async function logout() { await api("/logout","POST"); window.location.href="index.html" }
 
 // -------------------
-// SEND MESSAGE / REPLY
+// SEND / REPLY
 // -------------------
 async function sendMessage() {
   const subject = document.getElementById("subject").value
@@ -50,60 +42,31 @@ async function sendMessage() {
 
   let toUser = null
   if (threadId) {
-    // Find recipient from thread
     const messages = await api("/api/thread?id=" + threadId)
-    if (messages.length > 0) {
-      toUser = messages[0].fromUser === sessionStorage.getItem("username")
-        ? messages[0].toUser
-        : messages[0].fromUser
-    }
+    if (messages.length>0) toUser = messages[0].fromUser === sessionStorage.getItem("username") ? messages[0].toUser : messages[0].fromUser
   }
-
-  // For new messages (not a reply)
-  if (!toUser) {
-    toUser = document.getElementById("to")?.value
-    if (!toUser) return alert("Recipient required")
-  }
+  if (!toUser) { toUser = document.getElementById("to")?.value; if(!toUser) return alert("Recipient required") }
 
   const res = await api("/api/send", "POST", { toUser, subject, body, threadId })
-  if (res.success) {
-    sessionStorage.removeItem("replyThread")
-    window.location.href = "inbox.html" // Redirect to inbox after sending
-  }
+  if (res.success) { sessionStorage.removeItem("replyThread"); window.location.href="inbox.html" }
 }
 
 // -------------------
-// LOAD INBOX (collapsed threads)
+// LOAD INBOX
 // -------------------
 async function loadInbox() {
   const mails = await api("/api/inbox-collapsed")
   const list = document.getElementById("mailList")
   if (!list) return
   list.innerHTML = ""
-
   for (const mail of mails) {
     const div = document.createElement("div")
     div.className = "mail-item"
-
-    // Check if any message in this thread is unread
     const threadMessages = await api("/api/thread?id=" + mail.threadId)
-    const hasUnread = threadMessages.some(m => m.read === 0)
-
-    // Use only the first message for preview
-    const previewMessage = threadMessages[0]
-
-    const unreadClass = hasUnread ? "mailUnread" : ""
-    const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
-
-    div.innerHTML = `
-      <span class="${unreadClass}">
-        <b>${previewMessage.fromUser}</b> - ${previewMessage.subject} ${unreadDot}
-      </span>
-    `
-    div.onclick = () => {
-      sessionStorage.setItem("threadId", mail.threadId)
-      window.location.href = "view.html"
-    }
+    const hasUnread = threadMessages.some(m => m.read===0)
+    const preview = threadMessages[0]
+    div.innerHTML = `<span class="${hasUnread?'mailUnread':''}"><b>${preview.fromUser}</b> - ${preview.subject} ${hasUnread?'<span class="unreadDot"></span>':''}</span>`
+    div.onclick = ()=>{ sessionStorage.setItem("threadId", mail.threadId); window.location.href="view.html" }
     list.appendChild(div)
   }
 }
@@ -112,32 +75,18 @@ async function loadInbox() {
 // LOAD SENT
 // -------------------
 async function loadSent() {
-  const mails = await api("/api/sent")
+  const mails = await api("/api/sent-collapsed")
   const list = document.getElementById("mailList")
   if (!list) return
   list.innerHTML = ""
-
   for (const mail of mails) {
     const div = document.createElement("div")
     div.className = "mail-item"
-
-    // Check if any message in this thread is unread for recipient
     const threadMessages = await api("/api/thread?id=" + mail.threadId)
-    const hasUnread = threadMessages.some(m => m.read === 0 && m.fromUser !== sessionStorage.getItem("username"))
-
-    const previewMessage = threadMessages[0]
-    const unreadClass = hasUnread ? "mailUnread" : ""
-    const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
-
-    div.innerHTML = `
-      <span class="${unreadClass}">
-        To <b>${previewMessage.toUser}</b> - ${previewMessage.subject} ${unreadDot}
-      </span>
-    `
-    div.onclick = () => {
-      sessionStorage.setItem("threadId", mail.threadId)
-      window.location.href = "view.html"
-    }
+    const hasUnread = threadMessages.some(m=>m.read===0 && m.fromUser!==sessionStorage.getItem("username"))
+    const preview = threadMessages[0]
+    div.innerHTML = `<span class="${hasUnread?'mailUnread':''}">To <b>${preview.toUser}</b> - ${preview.subject} ${hasUnread?'<span class="unreadDot"></span>':''}</span>`
+    div.onclick = ()=>{ sessionStorage.setItem("threadId", mail.threadId); window.location.href="view.html" }
     list.appendChild(div)
   }
 }
@@ -147,25 +96,17 @@ async function loadSent() {
 // -------------------
 async function loadThread() {
   const threadId = sessionStorage.getItem("threadId")
-  if (!threadId) return
+  if(!threadId) return
   const convo = document.getElementById("conversation")
-  if (!convo) return
+  if(!convo) return
   const messages = await api("/api/thread?id=" + threadId)
   convo.innerHTML = ""
-
-  for (const m of messages) {
+  for(const m of messages){
     const div = document.createElement("div")
     div.className = "message"
-    const unreadClass = m.read ? "" : "mailUnread"
-    const unreadDot = m.read ? "" : '<span class="unreadDot"></span>'
-    div.innerHTML = `
-      <b class="${unreadClass}">${m.fromUser}</b> ${unreadDot}
-      <p>${m.body}</p>
-      <hr>
-    `
+    div.innerHTML = `<b class="${m.read?'':'mailUnread'}">${m.fromUser}</b> ${m.read?'':'<span class="unreadDot"></span>'}<p>${m.body}</p><hr>`
     convo.appendChild(div)
-
-    if (!m.read) await api("/api/mark-read", "POST", { id: m.id })
+    if(!m.read) await api("/api/mark-read","POST",{id:m.id})
   }
 }
 
@@ -174,12 +115,10 @@ async function loadThread() {
 // -------------------
 async function deleteThread() {
   const threadId = sessionStorage.getItem("threadId")
-  if (!threadId) return alert("No thread selected")
-  const messages = await api("/api/thread?id=" + threadId)
-  for (const m of messages) {
-    await api("/api/delete", "POST", { id: m.id })
-  }
-  window.location.href = "inbox.html"
+  if(!threadId) return alert("No thread selected")
+  const messages = await api("/api/thread?id="+threadId)
+  for(const m of messages) await api("/api/delete","POST",{id:m.id})
+  window.location.href="inbox.html"
 }
 
 // -------------------
@@ -187,9 +126,9 @@ async function deleteThread() {
 // -------------------
 function reply() {
   const threadId = sessionStorage.getItem("threadId")
-  if (!threadId) return
+  if(!threadId) return
   sessionStorage.setItem("replyThread", threadId)
-  window.location.href = "reply.html"
+  window.location.href="reply.html"
 }
 
 // -------------------
@@ -198,28 +137,28 @@ function reply() {
 async function loadUsers() {
   const users = await api("/api/users")
   const list = document.getElementById("userList")
-  if (!list) return
-  list.innerHTML = ""
-  users.forEach(u => {
+  if(!list) return
+  list.innerHTML=""
+  users.forEach(u=>{
     const div = document.createElement("div")
-    div.innerHTML = u.username + ' <button onclick="deleteUser(\'' + u.username + '\')">Delete</button>'
+    div.innerHTML = u.username+' <button onclick="deleteUser(\''+u.username+'\')">Delete</button>'
     list.appendChild(div)
   })
 }
 
-async function deleteUser(username) {
-  await api("/api/delete-user", "POST", { username })
+async function deleteUser(username){
+  await api("/api/delete-user","POST",{username})
   loadUsers()
 }
 
 // -------------------
-// DOM READY HOOK
+// DOM READY
 // -------------------
-document.addEventListener("DOMContentLoaded", () => {
-  if (document.getElementById("conversation")) loadThread()
-  if (document.getElementById("mailList")) {
+document.addEventListener("DOMContentLoaded",()=>{
+  if(document.getElementById("conversation")) loadThread()
+  if(document.getElementById("mailList")){
     const page = window.location.pathname.split("/").pop()
-    if (page === "inbox.html") loadInbox()
-    if (page === "sent.html") loadSent()
+    if(page==="inbox.html") loadInbox()
+    if(page==="sent.html") loadSent()
   }
 })

@@ -88,12 +88,16 @@ async function loadInbox() {
     // Check if any message in this thread is unread
     const threadMessages = await api("/api/thread?id=" + mail.threadId)
     const hasUnread = threadMessages.some(m => m.read === 0)
+
+    // Use only the first message for preview
+    const previewMessage = threadMessages[0]
+
     const unreadClass = hasUnread ? "mailUnread" : ""
     const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
 
     div.innerHTML = `
       <span class="${unreadClass}">
-        <b>${mail.fromUser}</b> - ${mail.subject} ${unreadDot}
+        <b>${previewMessage.fromUser}</b> - ${previewMessage.subject} ${unreadDot}
       </span>
     `
     div.onclick = () => {
@@ -117,15 +121,17 @@ async function loadSent() {
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // Optional: show unread if any recipient hasn't read
+    // Check if any message in this thread is unread for recipient
     const threadMessages = await api("/api/thread?id=" + mail.threadId)
     const hasUnread = threadMessages.some(m => m.read === 0 && m.fromUser !== sessionStorage.getItem("username"))
+
+    const previewMessage = threadMessages[0]
     const unreadClass = hasUnread ? "mailUnread" : ""
     const unreadDot = hasUnread ? '<span class="unreadDot"></span>' : ""
 
     div.innerHTML = `
       <span class="${unreadClass}">
-        To <b>${mail.toUser}</b> - ${mail.subject} ${unreadDot}
+        To <b>${previewMessage.toUser}</b> - ${previewMessage.subject} ${unreadDot}
       </span>
     `
     div.onclick = () => {

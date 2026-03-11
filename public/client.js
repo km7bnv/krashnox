@@ -71,93 +71,78 @@ async function sendMessage(){
 }
 
 // LOAD INBOX
-async function loadInbox(){
+// -------------------
+// LOAD INBOX
+// -------------------
+async function loadInbox() {
+  const mails = await api("/api/inbox-collapsed")
+  const list = document.getElementById("mailList")
+  if (!list) return
+  list.innerHTML = ""
 
-  const mails=await api("/api/inbox-collapsed")
+  const seenThreads = new Set()
+  for (const mail of mails) {
+    if (seenThreads.has(mail.threadId)) continue
+    seenThreads.add(mail.threadId)
 
-  const list=document.getElementById("mailList")
-  if(!list) return
+    const div = document.createElement("div")
+    div.className = "mail-item"
 
-  list.innerHTML=""
+    // Fetch thread messages to check for unread
+    const threadMessages = await api("/api/thread?id=" + mail.threadId)
+    const hasUnread = threadMessages.some(m => m.toUser === sessionStorage.getItem("username") && m.read === 0)
+    const preview = threadMessages[0]
 
-  for(const mail of mails){
+    div.innerHTML = `<span class="${hasUnread ? 'mailUnread' : ''}">
+      <b>${preview.fromUser}</b> - ${preview.subject} ${hasUnread ? '<span class="unreadDot"></span>' : ''}
+    </span>`
 
-    const div=document.createElement("div")
-    div.className="mail-item"
-
-    const threadMessages=await api("/api/thread?id="+mail.threadId)
-
-    const hasUnread=threadMessages.some(
-      m=>m.read===0 && m.fromUser!==sessionStorage.getItem("username")
-    )
-
-    const preview=threadMessages[threadMessages.length-1]
-
-    div.innerHTML=`
-      <span class="${hasUnread?'mailUnread':''}">
-      <b>${preview.fromUser}</b> - ${preview.subject}
-      ${hasUnread?'<span class="unreadDot"></span>':''}
-      </span>
-    `
-
-    div.onclick=()=>{
-      sessionStorage.setItem("threadId",mail.threadId)
-      window.location.href="view.html"
+    div.onclick = () => {
+      sessionStorage.setItem("threadId", mail.threadId)
+      window.location.href = "view.html"
     }
 
     list.appendChild(div)
   }
 }
 
-// LOAD SENT (FIXED)
-async function loadSent(){
+// -------------------
+// LOAD SENT
+// -------------------
+async function loadSent() {
+  const mails = await api("/api/sent-collapsed")
+  const list = document.getElementById("mailList")
+  if (!list) return
+  list.innerHTML = ""
 
-  const mails=await api("/api/sent-collapsed")
+  const seenThreads = new Set()
+  for (const mail of mails) {
+    if (seenThreads.has(mail.threadId)) continue
+    seenThreads.add(mail.threadId)
 
-  const list=document.getElementById("mailList")
-  if(!list) return
+    const div = document.createElement("div")
+    div.className = "mail-item"
 
-  list.innerHTML=""
+    // Fetch thread messages to check for unread replies
+    const threadMessages = await api("/api/thread?id=" + mail.threadId)
+    const hasUnread = threadMessages.some(m => m.toUser === sessionStorage.getItem("username") && m.read === 0)
+    const preview = threadMessages[0]
 
-  const currentUser=sessionStorage.getItem("username")
+    div.innerHTML = `<span class="${hasUnread ? 'mailUnread' : ''}">
+      To <b>${preview.toUser}</b> - ${preview.subject} ${hasUnread ? '<span class="unreadDot"></span>' : ''}
+    </span>`
 
-  for(const mail of mails){
-
-    const div=document.createElement("div")
-    div.className="mail-item"
-
-    const threadMessages=await api("/api/thread?id="+mail.threadId)
-
-    // find the latest message YOU sent
-    let preview=null
-    for(let i=threadMessages.length-1;i>=0;i--){
-      if(threadMessages[i].fromUser===currentUser){
-        preview=threadMessages[i]
-        break
-      }
-    }
-
-    if(!preview) preview=threadMessages[threadMessages.length-1]
-
-    const hasUnread=threadMessages.some(
-      m=>m.read===0 && m.fromUser!==currentUser
-    )
-
-    div.innerHTML=`
-      <span class="${hasUnread?'mailUnread':''}">
-      To <b>${preview.toUser}</b> - ${preview.subject}
-      ${hasUnread?'<span class="unreadDot"></span>':''}
-      </span>
-    `
-
-    div.onclick=()=>{
-      sessionStorage.setItem("threadId",mail.threadId)
-      window.location.href="view.html"
+    div.onclick = () => {
+      sessionStorage.setItem("threadId", mail.threadId)
+      window.location.href = "view.html"
     }
 
     list.appendChild(div)
   }
 }
+  }
+}
+
 
 // LOAD THREAD
 async function loadThread(){

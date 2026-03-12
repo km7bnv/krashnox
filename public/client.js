@@ -144,37 +144,34 @@ async function loadSent(){
 
 // LOAD THREAD
 async function loadThread(){
-
-  const threadId=sessionStorage.getItem("threadId")
+  const threadId = sessionStorage.getItem("threadId")
   if(!threadId) return
 
-  const convo=document.getElementById("conversation")
+  const convo = document.getElementById("conversation")
   if(!convo) return
 
-  const messages=await api("/api/thread?id="+threadId)
+  const messages = await api("/api/thread?id="+threadId)
 
   convo.innerHTML=""
 
   for(const m of messages){
 
-    const div=document.createElement("div")
+    const div = document.createElement("div")
     div.className="message"
 
-    div.innerHTML=`
-      <b class="${m.read?'':'mailUnread'}">${m.fromUser}</b>
-      ${m.read?'':'<span class="unreadDot"></span>'}
-      <p>${m.body}</p>
-      <hr>
-    `
+    div.innerHTML =
+      `<b>${m.fromUser}</b>
+       <p>${m.body}</p>
+       <hr>`
 
     convo.appendChild(div)
 
-    if(!m.read){
+    // mark message read
+    if(!m.read && m.toUser === sessionStorage.getItem("username")){
       await api("/api/mark-read","POST",{id:m.id})
     }
   }
 }
-
 // DELETE THREAD
 async function deleteThread(){
 

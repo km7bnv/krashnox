@@ -70,35 +70,36 @@ async function sendMessage(){
   }
 }
 
-// LOAD INBOX
 // -------------------
 // LOAD INBOX
 // -------------------
-async function loadInbox() {
+async function loadInbox(){
   const mails = await api("/api/inbox-collapsed")
   const list = document.getElementById("mailList")
-  if (!list) return
+  if(!list) return
+
   list.innerHTML = ""
 
-  const seenThreads = new Set()
-  for (const mail of mails) {
-    if (seenThreads.has(mail.threadId)) continue
-    seenThreads.add(mail.threadId)
+  const seen = new Set()
+
+  for(const m of mails){
+
+    if(seen.has(m.threadId)) continue
+    seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // Fetch thread messages to check for unread
-    const threadMessages = await api("/api/thread?id=" + mail.threadId)
-    const hasUnread = threadMessages.some(m => m.toUser === sessionStorage.getItem("username") && m.read === 0)
-    const preview = threadMessages[0]
+    const unread = m.read === 0 && m.toUser === sessionStorage.getItem("username")
 
-    div.innerHTML = `<span class="${hasUnread ? 'mailUnread' : ''}">
-      <b>${preview.fromUser}</b> - ${preview.subject} ${hasUnread ? '<span class="unreadDot"></span>' : ''}
-    </span>`
+    div.innerHTML =
+      `<span class="${unread ? 'mailUnread' : ''}">
+        <b>${m.fromUser}</b> - ${m.subject}
+        ${unread ? '<span class="unreadDot"></span>' : ''}
+      </span>`
 
-    div.onclick = () => {
-      sessionStorage.setItem("threadId", mail.threadId)
+    div.onclick = ()=>{
+      sessionStorage.setItem("threadId", m.threadId)
       window.location.href = "view.html"
     }
 
@@ -109,31 +110,30 @@ async function loadInbox() {
 // -------------------
 // LOAD SENT
 // -------------------
-async function loadSent() {
+async function loadSent(){
   const mails = await api("/api/sent-collapsed")
   const list = document.getElementById("mailList")
-  if (!list) return
+  if(!list) return
+
   list.innerHTML = ""
 
-  const seenThreads = new Set()
-  for (const mail of mails) {
-    if (seenThreads.has(mail.threadId)) continue
-    seenThreads.add(mail.threadId)
+  const seen = new Set()
+
+  for(const m of mails){
+
+    if(seen.has(m.threadId)) continue
+    seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // Fetch thread messages to check for unread replies
-    const threadMessages = await api("/api/thread?id=" + mail.threadId)
-    const hasUnread = threadMessages.some(m => m.toUser === sessionStorage.getItem("username") && m.read === 0)
-    const preview = threadMessages[0]
+    div.innerHTML =
+      `<span>
+        To <b>${m.toUser}</b> - ${m.subject}
+      </span>`
 
-    div.innerHTML = `<span class="${hasUnread ? 'mailUnread' : ''}">
-      To <b>${preview.toUser}</b> - ${preview.subject} ${hasUnread ? '<span class="unreadDot"></span>' : ''}
-    </span>`
-
-    div.onclick = () => {
-      sessionStorage.setItem("threadId", mail.threadId)
+    div.onclick = ()=>{
+      sessionStorage.setItem("threadId", m.threadId)
       window.location.href = "view.html"
     }
 

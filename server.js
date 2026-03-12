@@ -49,39 +49,44 @@ CREATE TABLE IF NOT EXISTS messages(
 
 /* ---------------- LOGIN ---------------- */
 
+// LOGIN
 app.post("/login",(req,res)=>{
   const {username,password} = req.body
 
-  if(username==="admin" && password==="adminpass"){
-    req.session.user="admin"
-    req.session.admin=true
+  if(!username || !password){
+    return res.json({success:false,error:"Missing credentials"})
+  }
+
+  // Admin login
+  if(username === "admin" && password === "adminpass"){
+    req.session.user = "admin"
+    req.session.admin = true
     return res.json({success:true,isAdmin:true})
   }
 
-  db.get("SELECT * FROM users WHERE username=?",[username],(err,user)=>{
-    if(!user) return res.json({success:false,error:"User not found"})
-    if(password!==user.password) return res.json({success:false,error:"Wrong password"})
+  // Normal user login
+  db.get(
+    "SELECT * FROM users WHERE username=?",
+    [username],
+    (err,user)=>{
+      if(err){
+        return res.json({success:false,error:"Database error"})
+      }
 
-    req.session.user=username
-    res.json({success:true})
-  })
-})
+      if(!user){
+        return res.json({success:false,error:"User not found"})
+      }
 
-app.post("/signup",(req,res)=>{
-  const {username,password} = req.body
+      if(user.password !== password){
+        return res.json({success:false,error:"Wrong password"})
+      }
 
-  db.run(
-    "INSERT INTO users(username,password) VALUES(?,?)",
-    [username,password],
-    err=>{
-      if(err) return res.json({success:false,error:"Username exists"})
-      res.json({success:true})
+      req.session.user = user.username
+      req.session.admin = false
+
+      res.json({success:true,isAdmin:false})
     }
   )
-})
-
-app.post("/logout",(req,res)=>{
-  req.session.destroy(()=>res.json({success:true}))
 })
 
 /* ---------------- SEND MESSAGE ---------------- */

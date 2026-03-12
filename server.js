@@ -89,6 +89,23 @@ app.post("/login",(req,res)=>{
   )
 })
 
+app.post("/signup",(req,res)=>{
+  const {username,password} = req.body
+
+  db.run(
+    "INSERT INTO users(username,password) VALUES(?,?)",
+    [username,password],
+    err=>{
+      if(err) return res.json({success:false,error:"Username exists"})
+      res.json({success:true})
+    }
+  )
+})
+
+app.post("/logout",(req,res)=>{
+  req.session.destroy(()=>res.json({success:true}))
+})
+
 /* ---------------- SEND MESSAGE ---------------- */
 
 app.post("/api/send",(req,res)=>{

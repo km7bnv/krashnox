@@ -140,8 +140,6 @@ async function loadSent() {
     list.appendChild(div)
   }
 }
-  }
-}
 
 
 // LOAD THREAD

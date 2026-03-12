@@ -70,7 +70,6 @@ async function sendMessage(){
   }
 }
 
-
 // -------------------
 // LOAD INBOX
 // -------------------
@@ -82,29 +81,33 @@ async function loadInbox(){
 
   list.innerHTML = ""
 
-  const seen = new Set()
   const username = sessionStorage.getItem("username")
+  const seen = new Set()
 
   for(const m of mails){
 
-    // KEEP anti-dupe logic EXACTLY like this
+    // anti-dupe
     if(seen.has(m.threadId)) continue
     seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // determine unread for preview
-    let unread = false
+    // check entire thread for unread messages
+    const thread = await api("/api/thread?id="+m.threadId)
 
-    if(m.toUser === username && m.read === 0){
-      unread = true
+    let unread = false
+    for(const msg of thread){
+      if(msg.toUser === username && msg.read === 0){
+        unread = true
+        break
+      }
     }
 
     div.innerHTML =
-      `<span class="${unread ? 'mailUnread' : ''}">
+      `<span class="${unread ? "mailUnread" : ""}">
         <b>${m.fromUser}</b> - ${m.subject}
-        ${unread ? '<span class="unreadDot"></span>' : ''}
+        ${unread ? '<span class="unreadDot"></span>' : ""}
       </span>`
 
     div.onclick = ()=>{
@@ -118,31 +121,32 @@ async function loadInbox(){
 // -------------------
 // LOAD SENT
 // -------------------
-async function loadSent() {
+async function loadSent(){
+
   const mails = await api("/api/sent-collapsed")
   const list = document.getElementById("mailList")
-  if (!list) return
+  if(!list) return
+
   list.innerHTML = ""
 
-  const seenThreads = new Set()
-  for (const mail of mails) {
-    if (seenThreads.has(mail.threadId)) continue
-    seenThreads.add(mail.threadId)
+  const seen = new Set()
+
+  for(const m of mails){
+
+    // anti-dupe (same as inbox)
+    if(seen.has(m.threadId)) continue
+    seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // Fetch thread messages to check for unread replies
-    const threadMessages = await api("/api/thread?id=" + mail.threadId)
-    const hasUnread = threadMessages.some(m => m.toUser === sessionStorage.getItem("username") && m.read === 0)
-    const preview = threadMessages[0]
+    div.innerHTML =
+      `<span>
+        To <b>${m.toUser}</b> - ${m.subject}
+      </span>`
 
-    div.innerHTML = `<span class="${hasUnread ? 'mailUnread' : ''}">
-      To <b>${preview.toUser}</b> - ${preview.subject} ${hasUnread ? '<span class="unreadDot"></span>' : ''}
-    </span>`
-
-    div.onclick = () => {
-      sessionStorage.setItem("threadId", mail.threadId)
+    div.onclick = ()=>{
+      sessionStorage.setItem("threadId", m.threadId)
       window.location.href = "view.html"
     }
 

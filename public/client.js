@@ -74,9 +74,6 @@ async function sendMessage(){
 // -------------------
 // LOAD INBOX
 // -------------------
-// -------------------
-// LOAD INBOX
-// -------------------
 async function loadInbox(){
   const mails = await api("/api/inbox-collapsed")
   const list = document.getElementById("mailList")
@@ -85,25 +82,22 @@ async function loadInbox(){
   list.innerHTML = ""
 
   const seen = new Set()
-  const username = sessionStorage.getItem("username")
 
   for(const m of mails){
 
+    // 🔒 DO NOT TOUCH THIS (anti-dupe)
     if(seen.has(m.threadId)) continue
     seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // check the entire thread for unread messages
-    const threadMessages = await api("/api/thread?id="+m.threadId)
-
+    // only determine unread state
+    const username = sessionStorage.getItem("username")
     let unread = false
-    for(const msg of threadMessages){
-      if(msg.read === 0 && msg.toUser === username){
-        unread = true
-        break
-      }
+
+    if(m.read === 0 && m.toUser === username){
+      unread = true
     }
 
     div.innerHTML =

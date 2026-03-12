@@ -14,6 +14,15 @@ app.use(session({
   saveUninitialized: false
 }))
 
+app.use((req,res,next)=>{
+  if(req.path === "/admin.html"){
+    if(!req.session.admin){
+      return res.redirect("/login.html")
+    }
+  }
+  next()
+})
+
 app.use(express.static("public"))
 
 /* ---------------- DATABASE ---------------- */

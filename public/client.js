@@ -90,7 +90,12 @@ async function loadInbox(){
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    const unread = m.read === 0 && m.toUser === sessionStorage.getItem("username")
+    // 🔧 FIX: check entire thread for unread messages
+    const threadMessages = await api("/api/thread?id="+m.threadId)
+
+    const unread = threadMessages.some(msg =>
+      msg.read === 0 && msg.toUser === sessionStorage.getItem("username")
+    )
 
     div.innerHTML =
       `<span class="${unread ? 'mailUnread' : ''}">

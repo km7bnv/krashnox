@@ -70,6 +70,10 @@ async function sendMessage(){
   }
 }
 
+
+// -------------------
+// LOAD INBOX
+// -------------------
 // -------------------
 // LOAD INBOX
 // -------------------
@@ -81,6 +85,7 @@ async function loadInbox(){
   list.innerHTML = ""
 
   const seen = new Set()
+  const username = sessionStorage.getItem("username")
 
   for(const m of mails){
 
@@ -90,8 +95,16 @@ async function loadInbox(){
     const div = document.createElement("div")
     div.className = "mail-item"
 
-    // only check if the preview message itself is unread
-    const unread = m.read === 0 && m.toUser === sessionStorage.getItem("username")
+    // check the entire thread for unread messages
+    const threadMessages = await api("/api/thread?id="+m.threadId)
+
+    let unread = false
+    for(const msg of threadMessages){
+      if(msg.read === 0 && msg.toUser === username){
+        unread = true
+        break
+      }
+    }
 
     div.innerHTML =
       `<span class="${unread ? 'mailUnread' : ''}">
@@ -107,7 +120,6 @@ async function loadInbox(){
     list.appendChild(div)
   }
 }
-
 // -------------------
 // LOAD SENT
 // -------------------

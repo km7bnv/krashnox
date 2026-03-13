@@ -118,6 +118,7 @@ async function loadInbox(){
     list.appendChild(div)
   }
 }
+
 // -------------------
 // LOAD SENT
 // -------------------
@@ -129,13 +130,7 @@ async function loadSent(){
 
   list.innerHTML = ""
 
-  const seen = new Set()
-
   for(const m of mails){
-
-    // anti-dupe (same as inbox)
-    if(seen.has(m.threadId)) continue
-    seen.add(m.threadId)
 
     const div = document.createElement("div")
     div.className = "mail-item"
